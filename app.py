@@ -19,6 +19,7 @@ import feedparser
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
+from urllib.parse import quote_plus
 import time
 
 # ----------------------------------------------------------------------------
@@ -240,7 +241,8 @@ def rsi_label(rsi_val: float) -> str:
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_news(query: str, lang: str = "id-ID", country: str = "ID", limit: int = 10):
     ceid = f"{country}:{lang.split('-')[0]}"
-    url = f"https://news.google.com/rss/search?q={query}&hl={lang}&gl={country}&ceid={ceid}"
+    encoded_query = quote_plus(query)
+    url = f"https://news.google.com/rss/search?q={encoded_query}&hl={lang}&gl={country}&ceid={ceid}"
     feed = feedparser.parse(url)
     items = []
     for entry in feed.entries[:limit]:
