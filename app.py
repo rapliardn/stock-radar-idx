@@ -12,6 +12,7 @@ Cara pakai: lihat README.md
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -684,21 +685,54 @@ st.sidebar.caption(
 # ----------------------------------------------------------------------------
 # HEADER
 # ----------------------------------------------------------------------------
-st.markdown(
-    f"""
-    <div class="app-header">
-        <div class="app-header-left">
+h_left, h_right = st.columns([3, 1])
+with h_left:
+    st.markdown(
+        """
+        <div class="app-header-left" style="padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:6px">
             <div class="logo-mark">▲▼</div>
             <div>
                 <div class="app-title">Stock Radar</div>
                 <div class="app-subtitle">Analisa Teknikal & Radar Saham Harian — Bursa Efek Indonesia</div>
             </div>
         </div>
-        <div class="live-chip">● {datetime.now().strftime('%d %b %Y · %H:%M')} WIB</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+        """,
+        unsafe_allow_html=True,
+    )
+with h_right:
+    components.html(
+        """
+        <div style="display:flex;align-items:center;justify-content:flex-end;height:100%;padding-top:6px">
+            <div id="live-clock" style="
+                font-family:'JetBrains Mono',monospace;
+                font-size:12px;
+                color:#2DD4BF;
+                border:1px solid rgba(45,212,191,0.35);
+                background:rgba(45,212,191,0.06);
+                border-radius:20px;
+                padding:6px 14px;
+                white-space:nowrap;
+            ">● memuat waktu...</div>
+        </div>
+        <style>
+            html, body { background: transparent !important; margin:0; padding:0; }
+        </style>
+        <script>
+            function updateClock() {
+                const now = new Date();
+                const opts = { timeZone: 'Asia/Jakarta' };
+                const dateStr = now.toLocaleDateString('id-ID', { ...opts, day:'2-digit', month:'short', year:'numeric' });
+                const timeStr = now.toLocaleTimeString('id-ID', { ...opts, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+                const el = document.getElementById('live-clock');
+                if (el) { el.innerText = '● ' + dateStr + ' · ' + timeStr + ' WIB'; }
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        </script>
+        """,
+        height=50,
+    )
+
 
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Analisa Saham", "🎯 Radar Harian", "🧮 Fundamental", "📰 Berita IHSG & Global"])
 
