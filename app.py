@@ -142,9 +142,9 @@ CUSTOM_CSS = """
         background: var(--bg-surface);
         border: 1px solid var(--border);
         border-left: 3px solid var(--teal);
-        border-radius: 8px;
-        padding: 13px 16px;
-        margin-bottom: 8px;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 4px;
     }
     .radar-card.breakout { border-left-color: var(--teal); }
     .radar-card.bounce { border-left-color: var(--amber); }
@@ -205,12 +205,12 @@ CUSTOM_CSS = """
 
     /* ---- Ticker badge (colored avatar) ---- */
     .ticker-badge {
-        width: 30px; height: 30px;
+        width: 26px; height: 26px;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         font-family: 'Space Grotesk', sans-serif;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 12px;
         flex-shrink: 0;
     }
 
@@ -543,6 +543,7 @@ with tab1:
         pivots = compute_pivot_points(df_raw)
         trend = trend_label(last)
         rsi_stat = rsi_label(last["RSI14"])
+        plan = compute_trading_plan(df, pivots)
 
         # Metric cards
         m1, m2, m3, m4, m5 = st.columns(5)
@@ -605,15 +606,17 @@ with tab1:
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA50"], name="EMA 50",
                                   line=dict(color="#A78BFA", width=1.3)), row=1, col=1)
 
-        # Support / resistance (rolling 20 & pivot)
-        fig.add_hline(y=pivots["r1"], line_dash="dot", line_color="#EF4444",
-                      annotation_text="R1", row=1, col=1)
-        fig.add_hline(y=pivots["s1"], line_dash="dot", line_color="#22C55E",
-                      annotation_text="S1", row=1, col=1)
-        fig.add_hline(y=df["High20"].iloc[-1], line_dash="dash", line_color="#F5A623",
-                      annotation_text="High 20D", row=1, col=1)
-        fig.add_hline(y=df["Low20"].iloc[-1], line_dash="dash", line_color="#2DD4BF",
-                      annotation_text="Low 20D", row=1, col=1)
+        # Entry / Target / Stop Loss — digambar langsung di chart
+        fig.add_hline(y=plan["entry_high"], line_dash="dash", line_color="#2DD4BF",
+                      annotation_text="Entry 1", annotation_font_color="#2DD4BF", row=1, col=1)
+        fig.add_hline(y=plan["entry_low"], line_dash="dash", line_color="#2DD4BF",
+                      annotation_text="Entry 2", annotation_font_color="#2DD4BF", row=1, col=1)
+        fig.add_hline(y=plan["stop_loss"], line_dash="dash", line_color="#EF4444",
+                      annotation_text="SL", annotation_font_color="#EF4444", row=1, col=1)
+        fig.add_hline(y=plan["target1"], line_dash="dash", line_color="#22C55E",
+                      annotation_text="TP1", annotation_font_color="#22C55E", row=1, col=1)
+        fig.add_hline(y=plan["target2"], line_dash="dot", line_color="#22C55E",
+                      annotation_text="TP2", annotation_font_color="#22C55E", row=1, col=1)
 
         vol_colors = np.where(df["Close"] >= df["Open"], "#22C55E", "#EF4444")
         fig.add_trace(go.Bar(x=df.index, y=df["Volume"], name="Volume",
@@ -649,7 +652,6 @@ with tab1:
 
         # Rencana Trading (referensi teknikal)
         st.markdown("#### 📋 Rencana Trading (Referensi Teknikal)")
-        plan = compute_trading_plan(df, pivots)
 
         p1, p2, p3, p4 = st.columns(4)
         with p1:
