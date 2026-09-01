@@ -333,7 +333,7 @@ def fetch_history(kode: str, period: str = "9mo", interval: str = "1d") -> pd.Da
     df = yf.Ticker(ticker).history(period=period, interval=interval, auto_adjust=False)
     if df is None or df.empty:
         return pd.DataFrame()
-    df = df.dropna(how="all")
+    df = df.dropna(subset=["Open", "High", "Low", "Close"])
     df.index = pd.to_datetime(df.index)
     return df
 
@@ -353,7 +353,7 @@ def fetch_history_batch(kodes: tuple, period: str = "4mo") -> dict:
                 df = raw
             else:
                 df = raw[yft]
-            df = df.dropna(how="all")
+            df = df.dropna(subset=["Open", "High", "Low", "Close"])
             if not df.empty:
                 result[kode] = df
         except Exception:
@@ -721,6 +721,8 @@ with tab1:
 
     if df_raw.empty:
         st.error(f"Data untuk **{kode_final}** tidak ditemukan. Cek kembali kode sahamnya.")
+    elif len(df_raw) < 2:
+        st.warning(f"Data historis untuk **{kode_final}** terlalu sedikit untuk dianalisa (mungkin baru IPO atau jarang diperdagangkan). Coba saham lain atau perpanjang rentang data di sidebar.")
     else:
         df = enrich_indicators(df_raw)
         last = df.iloc[-1]
