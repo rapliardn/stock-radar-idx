@@ -315,6 +315,34 @@ DEFAULT_WATCHLIST = [
     "INKP", "TKIM", "SMPL", "ESSA", "AKRA", "MDIY", "CSAP", "LPPF", "TRIS", "MPPA",
 ]
 
+SECTOR_GROUPS = {
+    "Perbankan & Keuangan": ["BBCA", "BBRI", "BMRI", "BBNI", "BBTN", "BRIS", "BJBR", "BJTM", "BFIN", "PNBN",
+                             "NISP", "MEGA", "BNGA", "BDMN", "ARTO", "BBHI", "BABP", "AGRO", "BTPS", "BNLI"],
+    "Consumer & Ritel": ["UNVR", "ICBP", "INDF", "MYOR", "KLBF", "CPIN", "JPFA", "GGRM", "HMSP", "SIDO",
+                         "AMRT", "MAPI", "ACES", "RALS", "ERAA", "MAPA", "ULTJ", "CMRY", "ROTI", "SKLT"],
+    "Energi & Tambang": ["ADRO", "PTBA", "ITMG", "HRUM", "MEDC", "PGAS", "ANTM", "INCO", "TINS", "MDKA",
+                         "AMMN", "BRMS", "TPIA", "BRPT", "ELSA", "ENRG", "PSAB", "DOID", "BUMI", "MBAP",
+                         "NCKL", "CBDK", "DEWA", "CUAN", "AADI", "BREN", "RAJA", "PGEO", "ADMR", "PTRO",
+                         "ABMM", "DSSA", "ITMA", "MBSS", "SOCI", "KKGI", "FIRE", "GEMS", "TOBA", "IATA"],
+    "Properti & Konstruksi": ["BSDE", "CTRA", "PWON", "SMRA", "APLN", "ASRI", "LPKR", "DMAS", "PANI", "BEST",
+                              "WIKA", "WSKT", "PTPP", "ADHI", "JSMR", "TOTL", "WEGE", "NRCA", "ACST", "SSIA"],
+    "Telko & Teknologi": ["TLKM", "EXCL", "ISAT", "TOWR", "TBIG", "MTEL", "GOTO", "BUKA", "EMTK", "MTDL"],
+    "Otomotif & Industri": ["ASII", "AUTO", "IMAS", "SMSM", "GJTL", "BOLT", "INDS", "DRMA", "GDST", "ASGR"],
+    "Semen & Material": ["SMGR", "INTP", "SMBR", "SMCB", "ARNA", "WSBP", "WTON", "MARK", "CAKK", "KRAS"],
+    "Kesehatan": ["HEAL", "MIKA", "PRDA", "SILO", "SAME", "KAEF", "PEHA", "TSPC", "PYFA", "SOHO"],
+    "Perkebunan & Agrikultur": ["AALI", "LSIP", "SIMP", "DSNG", "SGRO", "TBLA", "SMAR", "UNSP", "ANJT", "GZCO"],
+    "Transportasi & Logistik": ["BIRD", "SMDR", "TMAS", "ASSA", "IPCC", "SAFE", "CMPP", "GIAA", "HITS", "TRAM"],
+    "Media & Hiburan": ["SCMA", "MNCN", "VIVA", "MSKY", "FILM", "KBLV", "IPTV", "LINK", "MORA", "CENT"],
+    "Consumer Lainnya": ["CPRO", "STAR", "PANS", "YULE", "BOGA", "PZZA", "FAST", "MAPB", "HERO", "RANC",
+                         "CLEO", "GOOD", "DLTA", "ADES", "STTP", "KINO", "WOOD", "IMPC", "UNIC", "EKAD"],
+    "Kertas & Kimia": ["INKP", "TKIM", "SMPL", "ESSA", "AKRA", "MDIY", "CSAP", "LPPF", "TRIS", "MPPA"],
+}
+SECTOR_MAP = {kode: sektor for sektor, kodes in SECTOR_GROUPS.items() for kode in kodes}
+
+
+def get_sector(kode: str) -> str:
+    return SECTOR_MAP.get(kode.upper(), "Lainnya")
+
 # ----------------------------------------------------------------------------
 # HELPER: DATA & INDIKATOR
 # ----------------------------------------------------------------------------
@@ -360,6 +388,17 @@ def fetch_history_batch(kodes: tuple, period: str = "4mo") -> dict:
         except Exception:
             continue
     return result
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_ihsg_index(period: str = "6mo") -> pd.DataFrame:
+    """Ambil data index IHSG (Jakarta Composite Index, kode Yahoo Finance: ^JKSE)."""
+    df = yf.Ticker("^JKSE").history(period=period, interval="1d", auto_adjust=False)
+    if df is None or df.empty:
+        return pd.DataFrame()
+    df = df.dropna(subset=["Open", "High", "Low", "Close"])
+    df.index = pd.to_datetime(df.index)
+    return df
 
 
 def compute_ema(series: pd.Series, span: int) -> pd.Series:
@@ -734,7 +773,9 @@ with h_right:
     )
 
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Analisa Saham", "🎯 Radar Harian", "🧮 Fundamental", "📰 Berita IHSG & Global"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 Analisa Saham", "🎯 Radar Harian", "🗺️ Overview IHSG", "🧮 Fundamental", "📰 Berita IHSG & Global",
+])
 
 # ----------------------------------------------------------------------------
 # TAB 1 — ANALISA SAHAM PER TICKER
@@ -992,9 +1033,168 @@ with tab2:
         st.info("Klik tombol di atas untuk mulai scan watchlist kamu.")
 
 # ----------------------------------------------------------------------------
-# TAB 3 — ANALISA FUNDAMENTAL
+# TAB 3 — OVERVIEW IHSG & HEATMAP SEKTOR
 # ----------------------------------------------------------------------------
 with tab3:
+    st.markdown("### 🗺️ Overview IHSG & Heatmap Sektor")
+
+    # --- Index IHSG ---
+    with st.spinner("Mengambil data index IHSG..."):
+        df_ihsg = fetch_ihsg_index(period="6mo")
+
+    if df_ihsg.empty:
+        st.error("Data index IHSG tidak dapat diambil saat ini.")
+    else:
+        last_ihsg = df_ihsg.iloc[-1]
+        prev_ihsg = df_ihsg.iloc[-2]
+        ihsg_chg = last_ihsg["Close"] - prev_ihsg["Close"]
+        ihsg_chg_pct = ihsg_chg / prev_ihsg["Close"] * 100
+        ihsg_color = "var(--up)" if ihsg_chg >= 0 else "var(--down)"
+        ihsg_sign = "+" if ihsg_chg >= 0 else ""
+
+        i1, i2, i3 = st.columns(3)
+        with i1:
+            st.markdown(
+                f"<div class='metric-box'><div class='metric-label'>IHSG (Jakarta Composite)</div>"
+                f"<div class='metric-value' style='font-size:24px'>{last_ihsg['Close']:,.2f}</div>"
+                f"<div class='metric-sub' style='color:{ihsg_color}'>{ihsg_sign}{ihsg_chg:,.2f} ({ihsg_chg_pct:+.2f}%)</div></div>",
+                unsafe_allow_html=True,
+            )
+        with i2:
+            st.markdown(
+                f"<div class='metric-box'><div class='metric-label'>Tertinggi Hari Ini</div>"
+                f"<div class='metric-value'>{last_ihsg['High']:,.2f}</div></div>",
+                unsafe_allow_html=True,
+            )
+        with i3:
+            st.markdown(
+                f"<div class='metric-box'><div class='metric-label'>Terendah Hari Ini</div>"
+                f"<div class='metric-value'>{last_ihsg['Low']:,.2f}</div></div>",
+                unsafe_allow_html=True,
+            )
+
+        fig_ihsg = go.Figure()
+        fig_ihsg.add_trace(go.Scatter(
+            x=df_ihsg.index, y=df_ihsg["Close"], mode="lines", name="IHSG",
+            line=dict(color="#2DD4BF", width=2),
+            fill="tozeroy", fillcolor="rgba(45,212,191,0.08)",
+        ))
+        fig_ihsg.update_layout(
+            height=280, template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, sans-serif", color="#E8EBF2"),
+            margin=dict(l=10, r=10, t=20, b=10),
+            yaxis=dict(range=[df_ihsg["Close"].min() * 0.98, df_ihsg["Close"].max() * 1.02]),
+        )
+        st.plotly_chart(fig_ihsg, use_container_width=True)
+
+    st.markdown("---")
+
+    # --- Market Breadth & Heatmap Sektor ---
+    st.markdown("#### 📡 Market Breadth & Heatmap Sektor")
+    st.caption("Berdasarkan pergerakan harga hari terakhir dari seluruh saham di watchlist kamu.")
+
+    breadth_btn = st.button("🔄 Muat Data Market", type="primary", key="breadth_btn")
+
+    if breadth_btn:
+        with st.spinner(f"Mengambil data {len(watchlist)} saham..."):
+            batch_data = fetch_history_batch(tuple(watchlist), period="1mo")
+
+        rows = []
+        for kode in watchlist:
+            raw = batch_data.get(kode)
+            if raw is None or len(raw) < 2:
+                continue
+            last_c = raw["Close"].iloc[-1]
+            prev_c = raw["Close"].iloc[-2]
+            if prev_c == 0:
+                continue
+            chg_pct = (last_c - prev_c) / prev_c * 100
+            rows.append({"kode": kode, "sektor": get_sector(kode), "chg_pct": chg_pct})
+
+        if not rows:
+            st.warning("Data tidak tersedia. Coba lagi beberapa saat.")
+        else:
+            df_breadth = pd.DataFrame(rows)
+            n_up = (df_breadth["chg_pct"] > 0).sum()
+            n_down = (df_breadth["chg_pct"] < 0).sum()
+            n_flat = (df_breadth["chg_pct"] == 0).sum()
+            total = len(df_breadth)
+
+            b1, b2, b3, b4 = st.columns(4)
+            with b1:
+                st.markdown(
+                    f"<div class='metric-box'><div class='metric-label'>Saham Naik</div>"
+                    f"<div class='metric-value' style='color:var(--up)'>{n_up}</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with b2:
+                st.markdown(
+                    f"<div class='metric-box'><div class='metric-label'>Saham Turun</div>"
+                    f"<div class='metric-value' style='color:var(--down)'>{n_down}</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with b3:
+                st.markdown(
+                    f"<div class='metric-box'><div class='metric-label'>Tidak Berubah</div>"
+                    f"<div class='metric-value'>{n_flat}</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with b4:
+                ratio = n_up / n_down if n_down > 0 else n_up
+                st.markdown(
+                    f"<div class='metric-box'><div class='metric-label'>Rasio Naik:Turun</div>"
+                    f"<div class='metric-value'>{ratio:.2f}</div></div>",
+                    unsafe_allow_html=True,
+                )
+
+            # Bar breadth sederhana
+            fig_breadth = go.Figure()
+            fig_breadth.add_trace(go.Bar(
+                x=["Naik", "Turun", "Tidak Berubah"], y=[n_up, n_down, n_flat],
+                marker_color=["#22C55E", "#EF4444", "#7C8698"],
+            ))
+            fig_breadth.update_layout(
+                height=220, template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter, sans-serif", color="#E8EBF2"),
+                margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
+            )
+            st.plotly_chart(fig_breadth, use_container_width=True)
+
+            st.markdown("#### 🔥 Heatmap Performa Sektor")
+            sector_avg = df_breadth.groupby("sektor")["chg_pct"].mean().reset_index()
+            sector_count = df_breadth.groupby("sektor").size().reset_index(name="count")
+            sector_stats = sector_avg.merge(sector_count, on="sektor")
+
+            fig_heat = go.Figure(go.Treemap(
+                labels=sector_stats["sektor"],
+                parents=[""] * len(sector_stats),
+                values=sector_stats["count"],
+                marker=dict(
+                    colors=sector_stats["chg_pct"],
+                    colorscale=[[0, "#EF4444"], [0.5, "#7C8698"], [1, "#22C55E"]],
+                    cmid=0,
+                    showscale=True,
+                    colorbar=dict(title="% Chg"),
+                ),
+                text=[f"{s}<br>{c:+.2f}%" for s, c in zip(sector_stats["sektor"], sector_stats["chg_pct"])],
+                textinfo="text",
+                textfont=dict(family="Inter, sans-serif", size=13, color="#0A0E17"),
+            ))
+            fig_heat.update_layout(
+                height=380, margin=dict(l=5, r=5, t=5, b=5),
+                paper_bgcolor="rgba(0,0,0,0)",
+            )
+            st.plotly_chart(fig_heat, use_container_width=True)
+            st.caption("Ukuran kotak = jumlah saham per sektor di watchlist. Warna = rata-rata perubahan harga sektor hari ini.")
+    else:
+        st.info("Klik tombol di atas untuk memuat market breadth & heatmap sektor.")
+
+# ----------------------------------------------------------------------------
+# TAB 4 — ANALISA FUNDAMENTAL
+# ----------------------------------------------------------------------------
+with tab4:
     st.markdown("### 🧮 Analisa Fundamental")
     st.caption(
         "Metrik: PER, PBV, ROE, DER, pertumbuhan pendapatan, net profit margin. "
@@ -1122,7 +1322,7 @@ with tab3:
             st.info("Atur filter (opsional) lalu klik tombol scan untuk mulai.")
 
 
-with tab4:
+with tab5:
     col_ihsg, col_global = st.columns(2)
 
     with col_ihsg:
