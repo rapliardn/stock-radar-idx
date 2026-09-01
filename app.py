@@ -385,16 +385,36 @@ def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["VolAvg20"] = df["Volume"].rolling(20).mean()
     df["High20"] = df["High"].rolling(20).max().shift(1)
     df["Low20"] = df["Low"].rolling(20).min().shift(1)
+    df["ValueTraded"] = df["Close"] * df["Volume"]
+    df["AvgValue20"] = df["ValueTraded"].rolling(20).mean()
     return df
 
 
-def evaluate_signals(df: pd.DataFrame) -> dict:
+def format_rupiah_ringkas(value: float) -> str:
+    """Format angka jadi ringkas: 74.5B, 1.2T, dst (gaya terminal trading)."""
+    if value is None or pd.isna(value):
+        return "-"
+    if value >= 1e12:
+        return f"{value / 1e12:.2f}T"
+    if value >= 1e9:
+        return f"{value / 1e9:.2f}B"
+    if value >= 1e6:
+        return f"{value / 1e6:.2f}M"
+    return f"{value:,.0f}"
+
+
+def evaluate_signals(df: pd.DataFrame, min_avg_value_rp: float = 0) -> dict:
     """Cek sinyal radar sederhana: breakout, bounce, volume spike."""
     if len(df) < 25:
         return {}
 
     last = df.iloc[-1]
     prev = df.iloc[-2]
+
+    # Filter likuiditas: skip saham dengan rata-rata nilai transaksi 20 hari di bawah ambang
+    avg_value = last["AvgValue20"] if pd.notna(last["AvgValue20"]) else 0
+    if avg_value < min_avg_value_rp:
+        return {}
 
     vol_ratio = last["Volume"] / last["VolAvg20"] if last["VolAvg20"] and last["VolAvg20"] > 0 else 0
     price_chg_pct = (last["Close"] - prev["Close"]) / prev["Close"] * 100 if prev["Close"] else 0
@@ -423,6 +443,7 @@ def evaluate_signals(df: pd.DataFrame) -> dict:
         "harga": last["Close"],
         "perubahan_%": round(price_chg_pct, 2),
         "rsi": round(last["RSI14"], 1),
+        "avg_value": avg_value,
         "vol_ratio": round(vol_ratio, 2),
         "sinyal": signals,
     }
@@ -513,12 +534,30 @@ def fetch_news(query: str, lang: str = "id-ID", country: str = "ID", limit: int 
 st.sidebar.markdown("## ▲▼ Stock Radar")
 st.sidebar.caption("Tools analisa saham pribadi — data via Yahoo Finance (delay ~15-20 menit)")
 
+# Watchlist tersimpan lewat URL (bookmark link ini biar watchlist otomatis ke-load lagi)
+url_watchlist = st.query_params.get("wl", "")
+default_watchlist_str = url_watchlist.replace("_", ",") if url_watchlist else ", ".join(DEFAULT_WATCHLIST)
+
 watchlist_input = st.sidebar.text_area(
     "Watchlist (pisahkan dengan koma)",
-    value=", ".join(DEFAULT_WATCHLIST),
+    value=default_watchlist_str,
     height=110,
 )
 watchlist = [x.strip().upper() for x in watchlist_input.split(",") if x.strip()]
+st.query_params["wl"] = "_".join(watchlist)
+st.sidebar.caption(
+    "💾 Watchlist otomatis kesimpen di URL browser — **bookmark halaman ini** "
+    "biar watchlist kamu otomatis ke-load lagi kapan pun kamu buka linknya."
+)
+
+liquidity_min_miliar = st.sidebar.slider(
+    "Minimum rata-rata nilai transaksi harian (Miliar Rp)",
+    min_value=0, max_value=100, value=5, step=1,
+)
+st.sidebar.caption(
+    "Saham dengan rata-rata nilai transaksi 20 hari di bawah ambang ini "
+    "akan disaring dari hasil Radar Harian (mengurangi sinyal palsu dari saham tipis)."
+)
 
 period_option = st.sidebar.selectbox(
     "Rentang data historis",
@@ -742,10 +781,12 @@ with tab2:
 
     if scan_btn:
         results = []
+        min_avg_value_rp = liquidity_min_miliar * 1_000_000_000
         with st.spinner(f"Mengambil data {len(watchlist)} saham sekaligus (batch)..."):
             batch_data = fetch_history_batch(tuple(watchlist), period="4mo")
 
         progress = st.progress(0, text="Menganalisa sinyal...")
+        skipped_illiquid = 0
         for i, kode in enumerate(watchlist):
             progress.progress((i + 1) / len(watchlist), text=f"Menganalisa {kode}...")
             try:
@@ -753,19 +794,26 @@ with tab2:
                 if raw is None or raw.empty:
                     continue
                 enriched = enrich_indicators(raw)
-                sig = evaluate_signals(enriched)
+                sig = evaluate_signals(enriched, min_avg_value_rp=min_avg_value_rp)
                 if sig:
                     sig["kode"] = kode
                     results.append(sig)
+                elif len(enriched) >= 25:
+                    last_val = enriched["AvgValue20"].iloc[-1]
+                    if pd.notna(last_val) and last_val < min_avg_value_rp:
+                        skipped_illiquid += 1
             except Exception:
                 continue
         progress.empty()
+
+        if skipped_illiquid > 0:
+            st.caption(f"ℹ️ {skipped_illiquid} saham disaring karena rata-rata nilai transaksi di bawah Rp {liquidity_min_miliar} Miliar/hari.")
 
         if not results:
             st.info("Tidak ada sinyal Breakout / Bounce / Volume Spike terdeteksi di watchlist saat ini.")
         else:
             df_res = pd.DataFrame(results)
-            df_res = df_res[["kode", "harga", "perubahan_%", "rsi", "vol_ratio", "sinyal"]]
+            df_res = df_res[["kode", "harga", "perubahan_%", "rsi", "vol_ratio", "avg_value", "sinyal"]]
 
             for sinyal_type, emoji, desc, css_class in [
                 ("Breakout", "▲", "Harga menembus resistance 20 hari dengan volume tinggi", "breakout"),
@@ -789,7 +837,8 @@ with tab2:
                         f"<span class='{badge_class}'>{row['perubahan_%']:+.2f}%</span>"
                         f"<div class='radar-detail'>"
                         f"Rp {row['harga']:,.0f} &nbsp;·&nbsp; RSI {row['rsi']} "
-                        f"&nbsp;·&nbsp; Vol {row['vol_ratio']:.2f}x avg20</div>"
+                        f"&nbsp;·&nbsp; Vol {row['vol_ratio']:.2f}x avg20 "
+                        f"&nbsp;·&nbsp; Nilai {format_rupiah_ringkas(row['avg_value'])}</div>"
                         f"</div></div></div>",
                         unsafe_allow_html=True,
                     )
