@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-RapliArdn Stock Radar & Technical Analyzer
+IDX Stock Radar & Technical Analyzer
 =====================================
 Tools analisa saham pribadi untuk Bursa Efek Indonesia (IDX).
 Fitur:
