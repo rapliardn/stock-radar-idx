@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-IDX Stock Radar & Technical Analyzer
+RapliArdn Stock Radar & Technical Analyzer
 =====================================
 Tools analisa saham pribadi untuk Bursa Efek Indonesia (IDX).
 Fitur:
@@ -20,6 +20,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 from urllib.parse import quote_plus
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 # ----------------------------------------------------------------------------
@@ -176,6 +177,16 @@ CUSTOM_CSS = """
         background: rgba(239, 68, 68, 0.12);
         color: var(--down);
         border: 1px solid rgba(239, 68, 68, 0.35);
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .badge-warn {
+        background: rgba(245, 166, 35, 0.12);
+        color: var(--amber);
+        border: 1px solid rgba(245, 166, 35, 0.35);
         padding: 2px 10px;
         border-radius: 20px;
         font-family: 'JetBrains Mono', monospace;
@@ -508,6 +519,105 @@ def compute_trading_plan(df: pd.DataFrame, pivots: dict) -> dict:
 
 
 # ----------------------------------------------------------------------------
+# HELPER: ANALISA FUNDAMENTAL
+# ----------------------------------------------------------------------------
+
+@st.cache_data(ttl=43200, show_spinner=False)  # 12 jam — data fundamental jarang berubah
+def fetch_fundamentals(kode: str) -> dict:
+    ticker = to_yf_ticker(kode)
+    try:
+        info = yf.Ticker(ticker).get_info()
+    except Exception:
+        return {}
+    if not info or info.get("regularMarketPrice") is None and info.get("currentPrice") is None:
+        return {}
+    return {
+        "kode": kode,
+        "nama": info.get("longName") or info.get("shortName") or kode,
+        "sektor": info.get("sector") or "-",
+        "industri": info.get("industry") or "-",
+        "harga": info.get("currentPrice") or info.get("regularMarketPrice"),
+        "market_cap": info.get("marketCap"),
+        "per": info.get("trailingPE"),
+        "pbv": info.get("priceToBook"),
+        "roe": info.get("returnOnEquity"),
+        "der": info.get("debtToEquity"),
+        "revenue_growth": info.get("revenueGrowth"),
+        "npm": info.get("profitMargins"),
+        "dividend_yield": info.get("dividendYield"),
+    }
+
+
+def fetch_fundamentals_batch(kodes: list, max_workers: int = 8, progress_callback=None) -> list:
+    """Ambil data fundamental banyak saham secara paralel (tetap 1 request per saham,
+    tapi dijalankan bersamaan supaya jauh lebih cepat dari sekuensial)."""
+    results = []
+    total = len(kodes)
+    done = 0
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(fetch_fundamentals, k): k for k in kodes}
+        for future in as_completed(futures):
+            done += 1
+            if progress_callback:
+                progress_callback(done, total, futures[future])
+            try:
+                data = future.result()
+                if data:
+                    results.append(data)
+            except Exception:
+                continue
+    return results
+
+
+def fundamental_label(metric: str, value) -> tuple:
+    """Return (label, css_class_badge) — aturan umum, bukan patokan mutlak, beda tiap sektor."""
+    if value is None or pd.isna(value):
+        return "N/A", "badge-sell"
+    if metric == "per":
+        if value <= 0:
+            return "Rugi/N/A", "badge-sell"
+        if value < 15:
+            return "Relatif Murah", "badge-buy"
+        if value <= 25:
+            return "Wajar", "badge-warn"
+        return "Relatif Mahal", "badge-sell"
+    if metric == "pbv":
+        if value < 1:
+            return "Di Bawah Nilai Buku", "badge-buy"
+        if value <= 3:
+            return "Wajar", "badge-warn"
+        return "Premium", "badge-sell"
+    if metric == "roe":
+        pct = value * 100
+        if pct >= 15:
+            return "Bagus", "badge-buy"
+        if pct >= 8:
+            return "Cukup", "badge-warn"
+        return "Kurang", "badge-sell"
+    if metric == "der":
+        if value < 100:
+            return "Sehat", "badge-buy"
+        if value <= 200:
+            return "Waspada", "badge-warn"
+        return "Tinggi", "badge-sell"
+    if metric == "npm":
+        pct = value * 100
+        if pct >= 10:
+            return "Bagus", "badge-buy"
+        if pct >= 3:
+            return "Cukup", "badge-warn"
+        return "Tipis", "badge-sell"
+    if metric == "revenue_growth":
+        pct = value * 100
+        if pct > 5:
+            return "Tumbuh", "badge-buy"
+        if pct >= -5:
+            return "Stagnan", "badge-warn"
+        return "Menyusut", "badge-sell"
+    return "-", "badge-warn"
+
+
+# ----------------------------------------------------------------------------
 # HELPER: BERITA (Google News RSS)
 # ----------------------------------------------------------------------------
 
@@ -590,7 +700,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab1, tab2, tab3 = st.tabs(["📊 Analisa Saham", "🎯 Radar Harian", "📰 Berita IHSG & Global"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Analisa Saham", "🎯 Radar Harian", "🧮 Fundamental", "📰 Berita IHSG & Global"])
 
 # ----------------------------------------------------------------------------
 # TAB 1 — ANALISA SAHAM PER TICKER
@@ -846,9 +956,137 @@ with tab2:
         st.info("Klik tombol di atas untuk mulai scan watchlist kamu.")
 
 # ----------------------------------------------------------------------------
-# TAB 3 — BERITA IHSG & GLOBAL
+# TAB 3 — ANALISA FUNDAMENTAL
 # ----------------------------------------------------------------------------
 with tab3:
+    st.markdown("### 🧮 Analisa Fundamental")
+    st.caption(
+        "Metrik: PER, PBV, ROE, DER, pertumbuhan pendapatan, net profit margin. "
+        "Data dari Yahoo Finance — beberapa saham IDX punya data terbatas."
+    )
+
+    sub_tab_single, sub_tab_screener = st.tabs(["🔍 Cek 1 Saham", "📋 Screener Watchlist"])
+
+    with sub_tab_single:
+        kode_fund = st.selectbox(
+            "Pilih kode saham",
+            options=sorted(set(watchlist)),
+            index=0,
+            key="fund_ticker_select",
+        )
+        manual_fund = st.text_input("Atau ketik kode lain", value="", key="fund_ticker_manual")
+        kode_fund_final = manual_fund.strip().upper() if manual_fund.strip() else kode_fund
+
+        with st.spinner(f"Mengambil data fundamental {kode_fund_final}..."):
+            fdata = fetch_fundamentals(kode_fund_final)
+
+        if not fdata:
+            st.error(f"Data fundamental untuk **{kode_fund_final}** tidak tersedia.")
+        else:
+            st.markdown(f"#### {fdata['nama']} ({fdata['kode']})")
+            st.caption(f"Sektor: {fdata['sektor']} · Industri: {fdata['industri']}")
+
+            f1, f2, f3, f4, f5, f6 = st.columns(6)
+            metric_defs = [
+                (f1, "PER", fdata["per"], "per", lambda v: f"{v:.1f}x" if v else "N/A"),
+                (f2, "PBV", fdata["pbv"], "pbv", lambda v: f"{v:.2f}x" if v else "N/A"),
+                (f3, "ROE", fdata["roe"], "roe", lambda v: f"{v*100:.1f}%" if v is not None else "N/A"),
+                (f4, "DER", fdata["der"], "der", lambda v: f"{v:.0f}%" if v is not None else "N/A"),
+                (f5, "NPM", fdata["npm"], "npm", lambda v: f"{v*100:.1f}%" if v is not None else "N/A"),
+                (f6, "Growth Revenue", fdata["revenue_growth"], "revenue_growth", lambda v: f"{v*100:+.1f}%" if v is not None else "N/A"),
+            ]
+            for col, label, val, metric_key, fmt in metric_defs:
+                with col:
+                    lbl_text, badge_cls = fundamental_label(metric_key, val)
+                    st.markdown(
+                        f"<div class='metric-box'><div class='metric-label'>{label}</div>"
+                        f"<div class='metric-value' style='font-size:17px'>{fmt(val)}</div>"
+                        f"<div style='margin-top:6px'><span class='{badge_cls}'>{lbl_text}</span></div></div>",
+                        unsafe_allow_html=True,
+                    )
+
+            st.write("")
+            m1, m2 = st.columns(2)
+            with m1:
+                mcap = fdata["market_cap"]
+                st.markdown(
+                    f"<div class='metric-box'><div class='metric-label'>Market Cap</div>"
+                    f"<div class='metric-value'>Rp {format_rupiah_ringkas(mcap)}</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with m2:
+                dy = fdata["dividend_yield"]
+                dy_text = f"{dy*100:.2f}%" if dy is not None else "N/A"
+                st.markdown(
+                    f"<div class='metric-box'><div class='metric-label'>Dividend Yield</div>"
+                    f"<div class='metric-value'>{dy_text}</div></div>",
+                    unsafe_allow_html=True,
+                )
+
+            st.caption(
+                "⚠️ Ambang label (mis. ROE 'Bagus' ≥15%) adalah aturan umum lintas sektor, bukan patokan mutlak — "
+                "perusahaan perbankan/properti/komoditas punya karakteristik rasio yang berbeda-beda. "
+                "Bandingkan dengan kompetitor sesektor sebelum mengambil keputusan."
+            )
+
+    with sub_tab_screener:
+        st.caption(
+            "Scan seluruh watchlist untuk metrik fundamental. Data di-cache 12 jam, "
+            "jadi scan berikutnya jauh lebih cepat."
+        )
+        f_col1, f_col2, f_col3 = st.columns(3)
+        with f_col1:
+            min_roe = st.number_input("Min ROE (%)", value=0, step=1)
+        with f_col2:
+            max_der = st.number_input("Max DER (%)", value=300, step=10)
+        with f_col3:
+            max_per = st.number_input("Max PER (0 = tanpa batas)", value=0, step=1)
+
+        screener_btn = st.button("🔍 Scan Fundamental Watchlist", type="primary", key="fund_screener_btn")
+
+        if screener_btn:
+            progress = st.progress(0, text="Mengambil data fundamental...")
+
+            def update_progress(done, total, kode):
+                progress.progress(done / total, text=f"Mengambil data fundamental... ({done}/{total}) {kode}")
+
+            fund_results = fetch_fundamentals_batch(watchlist, max_workers=8, progress_callback=update_progress)
+            progress.empty()
+
+            if not fund_results:
+                st.warning("Tidak ada data fundamental yang berhasil diambil.")
+            else:
+                df_fund = pd.DataFrame(fund_results)
+
+                mask = pd.Series(True, index=df_fund.index)
+                if min_roe > 0:
+                    mask &= df_fund["roe"].apply(lambda v: v is not None and pd.notna(v) and v * 100 >= min_roe)
+                if max_der > 0:
+                    mask &= df_fund["der"].apply(lambda v: v is not None and pd.notna(v) and v <= max_der)
+                if max_per > 0:
+                    mask &= df_fund["per"].apply(lambda v: v is not None and pd.notna(v) and 0 < v <= max_per)
+
+                df_filtered = df_fund[mask].copy()
+                st.caption(f"{len(df_filtered)} dari {len(df_fund)} saham (dengan data tersedia) lolos filter.")
+
+                if df_filtered.empty:
+                    st.info("Tidak ada saham yang lolos kriteria filter. Coba longgarkan filternya.")
+                else:
+                    df_filtered = df_filtered.sort_values("roe", ascending=False, na_position="last")
+                    display_df = df_filtered[["kode", "nama", "sektor", "per", "pbv", "roe", "der", "npm", "revenue_growth"]].copy()
+                    display_df["roe"] = display_df["roe"].apply(lambda v: f"{v*100:.1f}%" if pd.notna(v) else "-")
+                    display_df["der"] = display_df["der"].apply(lambda v: f"{v:.0f}%" if pd.notna(v) else "-")
+                    display_df["npm"] = display_df["npm"].apply(lambda v: f"{v*100:.1f}%" if pd.notna(v) else "-")
+                    display_df["revenue_growth"] = display_df["revenue_growth"].apply(lambda v: f"{v*100:+.1f}%" if pd.notna(v) else "-")
+                    display_df["per"] = display_df["per"].apply(lambda v: f"{v:.1f}x" if pd.notna(v) else "-")
+                    display_df["pbv"] = display_df["pbv"].apply(lambda v: f"{v:.2f}x" if pd.notna(v) else "-")
+                    display_df.columns = ["Kode", "Nama", "Sektor", "PER", "PBV", "ROE", "DER", "NPM", "Growth Rev."]
+                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("Atur filter (opsional) lalu klik tombol scan untuk mulai.")
+
+
+with tab4:
     col_ihsg, col_global = st.columns(2)
 
     with col_ihsg:
