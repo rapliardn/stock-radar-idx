@@ -203,6 +203,50 @@ CUSTOM_CSS = """
         margin-top: 3px;
     }
 
+    /* ---- Ticker badge (colored avatar) ---- */
+    .ticker-badge {
+        width: 30px; height: 30px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    /* ---- Trading plan box ---- */
+    .plan-box {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+    }
+    .plan-label {
+        font-family: 'Inter', sans-serif;
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-bottom: 3px;
+    }
+    .plan-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .progress-track {
+        background: var(--border);
+        border-radius: 20px;
+        height: 8px;
+        width: 100%;
+        overflow: hidden;
+        margin-top: 6px;
+    }
+    .progress-fill {
+        background: linear-gradient(90deg, var(--teal), var(--amber));
+        height: 100%;
+        border-radius: 20px;
+    }
+
     /* ---- Tabs & buttons ---- */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
@@ -363,6 +407,44 @@ def rsi_label(rsi_val: float) -> str:
     if rsi_val <= 30:
         return "Oversold"
     return "Netral"
+
+
+BADGE_PALETTE = ["#2DD4BF", "#F5A623", "#A78BFA", "#60A5FA", "#F472B6", "#34D399", "#FB923C", "#38BDF8"]
+
+
+def ticker_badge_color(kode: str) -> str:
+    idx = sum(ord(c) for c in kode) % len(BADGE_PALETTE)
+    return BADGE_PALETTE[idx]
+
+
+def compute_trading_plan(df: pd.DataFrame, pivots: dict) -> dict:
+    """Rencana trading referensi (bukan sinyal pasti) dari support/resistance & pivot point."""
+    last = df.iloc[-1]
+    low20 = df["Low20"].iloc[-1] if pd.notna(df["Low20"].iloc[-1]) else last["Close"] * 0.95
+    high20 = df["High20"].iloc[-1] if pd.notna(df["High20"].iloc[-1]) else last["Close"] * 1.05
+
+    entry_low = min(last["EMA21"], last["Close"]) if pd.notna(last["EMA21"]) else pivots["s1"]
+    entry_high = last["Close"]
+    entry_mid = (entry_low + entry_high) / 2
+
+    stop_loss = min(low20, pivots["s1"]) * 0.99
+    target1 = pivots["r1"]
+    target2 = max(pivots["r2"], high20)
+
+    risk = entry_mid - stop_loss
+    reward = target1 - entry_mid
+    rr = reward / risk if risk > 0 else None
+
+    progress_pct = 0
+    if target1 != entry_mid:
+        progress_pct = (last["Close"] - entry_mid) / (target1 - entry_mid) * 100
+    progress_pct = max(0, min(100, progress_pct))
+
+    return {
+        "entry_low": entry_low, "entry_high": entry_high,
+        "stop_loss": stop_loss, "target1": target1, "target2": target2,
+        "rr": rr, "progress_pct": progress_pct,
+    }
 
 
 # ----------------------------------------------------------------------------
@@ -565,6 +647,49 @@ with tab1:
         st.markdown("\n".join(interp))
         st.caption("Catatan: ringkasan ini murni hasil perhitungan indikator teknikal, bukan saran investasi.")
 
+        # Rencana Trading (referensi teknikal)
+        st.markdown("#### 📋 Rencana Trading (Referensi Teknikal)")
+        plan = compute_trading_plan(df, pivots)
+
+        p1, p2, p3, p4 = st.columns(4)
+        with p1:
+            st.markdown(
+                f"<div class='plan-box'><div class='plan-label'>Entry Area</div>"
+                f"<div class='plan-value'>{plan['entry_low']:,.0f} – {plan['entry_high']:,.0f}</div></div>",
+                unsafe_allow_html=True,
+            )
+        with p2:
+            st.markdown(
+                f"<div class='plan-box'><div class='plan-label'>Target (TP1 / TP2)</div>"
+                f"<div class='plan-value' style='color:var(--up)'>{plan['target1']:,.0f} / {plan['target2']:,.0f}</div></div>",
+                unsafe_allow_html=True,
+            )
+        with p3:
+            st.markdown(
+                f"<div class='plan-box'><div class='plan-label'>Stop Loss</div>"
+                f"<div class='plan-value' style='color:var(--down)'>{plan['stop_loss']:,.0f}</div></div>",
+                unsafe_allow_html=True,
+            )
+        with p4:
+            rr_text = f"1 : {plan['rr']:.1f}" if plan["rr"] else "-"
+            st.markdown(
+                f"<div class='plan-box'><div class='plan-label'>Risk / Reward</div>"
+                f"<div class='plan-value'>{rr_text}</div></div>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            f"<div style='margin-top:10px'>"
+            f"<div class='plan-label'>{plan['progress_pct']:.1f}% menuju TP1 dari area entry</div>"
+            f"<div class='progress-track'><div class='progress-fill' style='width:{plan['progress_pct']:.0f}%'></div></div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "⚠️ Rencana trading ini dihitung otomatis dari support/resistance & pivot point — "
+            "bukan sinyal pasti dan bukan rekomendasi jual/beli. Selalu sesuaikan dengan analisa & manajemen risiko kamu sendiri."
+        )
+
 # ----------------------------------------------------------------------------
 # TAB 2 — RADAR SAHAM HARIAN
 # ----------------------------------------------------------------------------
@@ -610,14 +735,18 @@ with tab2:
                 st.caption(desc)
                 for _, row in subset.iterrows():
                     badge_class = "badge-buy" if row["perubahan_%"] >= 0 else "badge-sell"
+                    bcolor = ticker_badge_color(row["kode"])
                     st.markdown(
                         f"<div class='radar-card {css_class}'>"
+                        f"<div style='display:flex;align-items:center;gap:12px'>"
+                        f"<div class='ticker-badge' style='background:{bcolor}22;color:{bcolor};border:1px solid {bcolor}66'>{row['kode'][0]}</div>"
+                        f"<div style='flex:1'>"
                         f"<span class='radar-ticker'>{row['kode']}</span> "
                         f"<span class='{badge_class}'>{row['perubahan_%']:+.2f}%</span>"
                         f"<div class='radar-detail'>"
                         f"Rp {row['harga']:,.0f} &nbsp;·&nbsp; RSI {row['rsi']} "
                         f"&nbsp;·&nbsp; Vol {row['vol_ratio']:.2f}x avg20</div>"
-                        f"</div>",
+                        f"</div></div></div>",
                         unsafe_allow_html=True,
                     )
     else:
