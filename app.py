@@ -34,72 +34,203 @@ st.set_page_config(
 
 CUSTOM_CSS = """
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+        --bg-base: #0A0E17;
+        --bg-surface: #10151F;
+        --border: #1C2333;
+        --teal: #2DD4BF;
+        --amber: #F5A623;
+        --violet: #A78BFA;
+        --up: #22C55E;
+        --down: #EF4444;
+        --text-primary: #E8EBF2;
+        --text-muted: #7C8698;
+    }
+
     .stApp {
-        background: radial-gradient(1200px 600px at 10% -10%, #16213a 0%, #0b0f1a 45%, #05070d 100%);
-        color: #e6e8ef;
+        background:
+            radial-gradient(900px 480px at 8% -8%, rgba(45, 212, 191, 0.06) 0%, transparent 60%),
+            var(--bg-base);
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
     }
     section[data-testid="stSidebar"] {
-        background: #0b0f1a;
-        border-right: 1px solid #1f2740;
+        background: var(--bg-surface);
+        border-right: 1px solid var(--border);
     }
     h1, h2, h3, h4 {
-        font-family: 'Segoe UI', sans-serif;
-        letter-spacing: 0.3px;
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.01em;
     }
-    .radar-card {
-        background: linear-gradient(145deg, #121a2e, #0d1322);
-        border: 1px solid #22304f;
-        border-radius: 14px;
-        padding: 16px 18px;
-        margin-bottom: 10px;
+    [data-testid="stMetricValue"], .mono-num {
+        font-family: 'JetBrains Mono', monospace;
     }
-    .metric-box {
-        background: linear-gradient(145deg, #121a2e, #0d1322);
-        border: 1px solid #22304f;
-        border-radius: 14px;
-        padding: 14px 18px;
-        text-align: center;
+
+    /* ---- Header ---- */
+    .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 16px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid var(--border);
     }
-    .badge-buy {
-        background: rgba(34, 197, 94, 0.15);
-        color: #4ade80;
-        border: 1px solid rgba(74, 222, 128, 0.4);
-        padding: 3px 10px;
-        border-radius: 20px;
+    .app-header-left { display: flex; align-items: center; gap: 14px; }
+    .logo-mark {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 18px;
+        color: var(--teal);
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 11px;
+        line-height: 1;
+    }
+    .app-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.1;
+    }
+    .app-subtitle {
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    .live-chip {
+        font-family: 'JetBrains Mono', monospace;
         font-size: 12px;
-        font-weight: 600;
-    }
-    .badge-warn {
-        background: rgba(250, 204, 21, 0.12);
-        color: #facc15;
-        border: 1px solid rgba(250, 204, 21, 0.4);
-        padding: 3px 10px;
+        color: var(--teal);
+        border: 1px solid rgba(45, 212, 191, 0.35);
+        background: rgba(45, 212, 191, 0.06);
         border-radius: 20px;
+        padding: 6px 14px;
+    }
+
+    /* ---- Metric strip ---- */
+    .metric-box {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+    .metric-label {
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+    }
+    .metric-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 21px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .metric-sub {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        margin-top: 2px;
+    }
+
+    /* ---- Radar signal cards: color-coded left border by signal type ---- */
+    .radar-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--teal);
+        border-radius: 8px;
+        padding: 13px 16px;
+        margin-bottom: 8px;
+    }
+    .radar-card.breakout { border-left-color: var(--teal); }
+    .radar-card.bounce { border-left-color: var(--amber); }
+    .radar-card.volspike { border-left-color: var(--violet); }
+    .radar-ticker {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .radar-detail {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12.5px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .badge-buy {
+        background: rgba(34, 197, 94, 0.12);
+        color: var(--up);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-family: 'JetBrains Mono', monospace;
         font-size: 12px;
         font-weight: 600;
     }
     .badge-sell {
-        background: rgba(248, 113, 113, 0.12);
-        color: #f87171;
-        border: 1px solid rgba(248, 113, 113, 0.4);
-        padding: 3px 10px;
+        background: rgba(239, 68, 68, 0.12);
+        color: var(--down);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        padding: 2px 10px;
         border-radius: 20px;
+        font-family: 'JetBrains Mono', monospace;
         font-size: 12px;
         font-weight: 600;
     }
+
+    /* ---- News list ---- */
     .news-item {
-        border-bottom: 1px solid #1f2740;
-        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+        padding: 11px 0;
     }
     .news-item a {
-        color: #93c5fd;
+        color: var(--text-primary);
         text-decoration: none;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        font-size: 14.5px;
+    }
+    .news-item a:hover { color: var(--teal); }
+    .news-source {
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-muted);
+        font-size: 11.5px;
+        margin-top: 3px;
+    }
+
+    /* ---- Tabs & buttons ---- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        border-bottom: 1px solid var(--border);
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 500;
+        color: var(--text-muted);
+        background: transparent;
+    }
+    .stTabs [aria-selected="true"] {
+        color: var(--teal) !important;
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: var(--teal) !important;
+    }
+    div.stButton > button[kind="primary"] {
+        background: var(--teal);
+        color: #0A0E17;
+        border: none;
         font-weight: 600;
     }
-    .news-source {
-        color: #7d8aa8;
-        font-size: 12px;
+    div.stButton > button[kind="primary"]:hover {
+        background: #26B8A5;
+        color: #0A0E17;
     }
+
     footer {visibility: hidden;}
 </style>
 """
@@ -258,7 +389,7 @@ def fetch_news(query: str, lang: str = "id-ID", country: str = "ID", limit: int 
 # ----------------------------------------------------------------------------
 # SIDEBAR
 # ----------------------------------------------------------------------------
-st.sidebar.markdown("## 📈 IDX Stock Radar")
+st.sidebar.markdown("## ▲▼ Stock Radar")
 st.sidebar.caption("Tools analisa saham pribadi — data via Yahoo Finance (delay ~15-20 menit)")
 
 watchlist_input = st.sidebar.text_area(
@@ -283,8 +414,21 @@ st.sidebar.caption(
 # ----------------------------------------------------------------------------
 # HEADER
 # ----------------------------------------------------------------------------
-st.markdown("# 📈 IDX Stock Radar & Technical Analyzer")
-st.caption(f"Update terakhir: {datetime.now().strftime('%A, %d %B %Y — %H:%M')} WIB")
+st.markdown(
+    f"""
+    <div class="app-header">
+        <div class="app-header-left">
+            <div class="logo-mark">▲▼</div>
+            <div>
+                <div class="app-title">Stock Radar</div>
+                <div class="app-subtitle">Analisa Teknikal & Radar Saham Harian — Bursa Efek Indonesia</div>
+            </div>
+        </div>
+        <div class="live-chip">● {datetime.now().strftime('%d %b %Y · %H:%M')} WIB</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 tab1, tab2, tab3 = st.tabs(["📊 Analisa Saham", "🎯 Radar Harian", "📰 Berita IHSG & Global"])
 
@@ -320,41 +464,41 @@ with tab1:
 
         # Metric cards
         m1, m2, m3, m4, m5 = st.columns(5)
-        chg_color = "#4ade80" if chg >= 0 else "#f87171"
+        chg_color = "var(--up)" if chg >= 0 else "var(--down)"
         chg_sign = "+" if chg >= 0 else ""
         with m1:
             st.markdown(
-                f"<div class='metric-box'><div style='color:#7d8aa8;font-size:12px'>Harga Terakhir</div>"
-                f"<div style='font-size:22px;font-weight:700'>Rp {last['Close']:,.0f}</div>"
-                f"<div style='color:{chg_color};font-size:13px'>"
+                f"<div class='metric-box'><div class='metric-label'>Harga Terakhir</div>"
+                f"<div class='metric-value'>Rp {last['Close']:,.0f}</div>"
+                f"<div class='metric-sub' style='color:{chg_color}'>"
                 f"{chg_sign}{chg:,.0f} ({chg_pct:+.2f}%)</div></div>",
                 unsafe_allow_html=True,
             )
         with m2:
             st.markdown(
-                f"<div class='metric-box'><div style='color:#7d8aa8;font-size:12px'>RSI (14)</div>"
-                f"<div style='font-size:22px;font-weight:700'>{last['RSI14']:.1f}</div>"
-                f"<div style='font-size:13px'>{rsi_stat}</div></div>",
+                f"<div class='metric-box'><div class='metric-label'>RSI (14)</div>"
+                f"<div class='metric-value'>{last['RSI14']:.1f}</div>"
+                f"<div class='metric-sub' style='color:var(--text-muted)'>{rsi_stat}</div></div>",
                 unsafe_allow_html=True,
             )
         with m3:
             st.markdown(
-                f"<div class='metric-box'><div style='color:#7d8aa8;font-size:12px'>Trend (EMA)</div>"
-                f"<div style='font-size:16px;font-weight:700;margin-top:6px'>{trend}</div></div>",
+                f"<div class='metric-box'><div class='metric-label'>Trend (EMA)</div>"
+                f"<div style='font-family:\"Space Grotesk\",sans-serif;font-size:16px;font-weight:700;margin-top:6px'>{trend}</div></div>",
                 unsafe_allow_html=True,
             )
         with m4:
             vol_ratio = last["Volume"] / last["VolAvg20"] if last["VolAvg20"] else 0
             st.markdown(
-                f"<div class='metric-box'><div style='color:#7d8aa8;font-size:12px'>Volume vs Avg20</div>"
-                f"<div style='font-size:22px;font-weight:700'>{vol_ratio:.2f}x</div></div>",
+                f"<div class='metric-box'><div class='metric-label'>Volume vs Avg20</div>"
+                f"<div class='metric-value'>{vol_ratio:.2f}x</div></div>",
                 unsafe_allow_html=True,
             )
         with m5:
             st.markdown(
-                f"<div class='metric-box'><div style='color:#7d8aa8;font-size:12px'>Support / Resistance (Pivot)</div>"
-                f"<div style='font-size:14px;font-weight:700;margin-top:6px'>"
-                f"S1: {pivots['s1']:,.0f} | R1: {pivots['r1']:,.0f}</div></div>",
+                f"<div class='metric-box'><div class='metric-label'>Support / Resistance (Pivot)</div>"
+                f"<div class='metric-sub' style='margin-top:6px;color:var(--text-primary)'>"
+                f"S1: {pivots['s1']:,.0f} &nbsp;·&nbsp; R1: {pivots['r1']:,.0f}</div></div>",
                 unsafe_allow_html=True,
             )
 
@@ -369,41 +513,42 @@ with tab1:
 
         fig.add_trace(go.Candlestick(
             x=df.index, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],
-            name="Harga", increasing_line_color="#4ade80", decreasing_line_color="#f87171",
+            name="Harga", increasing_line_color="#22C55E", decreasing_line_color="#EF4444",
         ), row=1, col=1)
 
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA9"], name="EMA 9",
-                                  line=dict(color="#38bdf8", width=1.3)), row=1, col=1)
+                                  line=dict(color="#2DD4BF", width=1.3)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA21"], name="EMA 21",
-                                  line=dict(color="#facc15", width=1.3)), row=1, col=1)
+                                  line=dict(color="#F5A623", width=1.3)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA50"], name="EMA 50",
-                                  line=dict(color="#c084fc", width=1.3)), row=1, col=1)
+                                  line=dict(color="#A78BFA", width=1.3)), row=1, col=1)
 
         # Support / resistance (rolling 20 & pivot)
-        fig.add_hline(y=pivots["r1"], line_dash="dot", line_color="#f87171",
+        fig.add_hline(y=pivots["r1"], line_dash="dot", line_color="#EF4444",
                       annotation_text="R1", row=1, col=1)
-        fig.add_hline(y=pivots["s1"], line_dash="dot", line_color="#4ade80",
+        fig.add_hline(y=pivots["s1"], line_dash="dot", line_color="#22C55E",
                       annotation_text="S1", row=1, col=1)
-        fig.add_hline(y=df["High20"].iloc[-1], line_dash="dash", line_color="#fb923c",
+        fig.add_hline(y=df["High20"].iloc[-1], line_dash="dash", line_color="#F5A623",
                       annotation_text="High 20D", row=1, col=1)
-        fig.add_hline(y=df["Low20"].iloc[-1], line_dash="dash", line_color="#22d3ee",
+        fig.add_hline(y=df["Low20"].iloc[-1], line_dash="dash", line_color="#2DD4BF",
                       annotation_text="Low 20D", row=1, col=1)
 
-        vol_colors = np.where(df["Close"] >= df["Open"], "#4ade80", "#f87171")
+        vol_colors = np.where(df["Close"] >= df["Open"], "#22C55E", "#EF4444")
         fig.add_trace(go.Bar(x=df.index, y=df["Volume"], name="Volume",
                               marker_color=vol_colors), row=2, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["VolAvg20"], name="Vol Avg 20",
-                                  line=dict(color="#93c5fd", width=1)), row=2, col=1)
+                                  line=dict(color="#7C8698", width=1)), row=2, col=1)
 
         fig.add_trace(go.Scatter(x=df.index, y=df["RSI14"], name="RSI 14",
-                                  line=dict(color="#f472b6", width=1.5)), row=3, col=1)
-        fig.add_hline(y=70, line_dash="dot", line_color="#f87171", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dot", line_color="#4ade80", row=3, col=1)
+                                  line=dict(color="#A78BFA", width=1.5)), row=3, col=1)
+        fig.add_hline(y=70, line_dash="dot", line_color="#EF4444", row=3, col=1)
+        fig.add_hline(y=30, line_dash="dot", line_color="#22C55E", row=3, col=1)
 
         fig.update_layout(
             height=780, template="plotly_dark",
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             xaxis_rangeslider_visible=False,
+            font=dict(family="Inter, sans-serif", color="#E8EBF2"),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(l=10, r=10, t=40, b=10),
         )
@@ -453,10 +598,10 @@ with tab2:
             df_res = pd.DataFrame(results)
             df_res = df_res[["kode", "harga", "perubahan_%", "rsi", "vol_ratio", "sinyal"]]
 
-            for sinyal_type, emoji, desc in [
-                ("Breakout", "🚀", "Harga menembus resistance 20 hari dengan volume tinggi"),
-                ("Bounce", "🔄", "Rebound dari area support / EMA21 dengan RSI membaik"),
-                ("Volume Spike", "🔊", "Lonjakan volume signifikan (≥2x rata-rata 20 hari)"),
+            for sinyal_type, emoji, desc, css_class in [
+                ("Breakout", "▲", "Harga menembus resistance 20 hari dengan volume tinggi", "breakout"),
+                ("Bounce", "↻", "Rebound dari area support / EMA21 dengan RSI membaik", "bounce"),
+                ("Volume Spike", "◆", "Lonjakan volume signifikan (≥2x rata-rata 20 hari)", "volspike"),
             ]:
                 subset = df_res[df_res["sinyal"].apply(lambda s: sinyal_type in s)]
                 if subset.empty:
@@ -466,11 +611,12 @@ with tab2:
                 for _, row in subset.iterrows():
                     badge_class = "badge-buy" if row["perubahan_%"] >= 0 else "badge-sell"
                     st.markdown(
-                        f"<div class='radar-card'>"
-                        f"<b style='font-size:16px'>{row['kode']}</b> "
-                        f"<span class='{badge_class}'>{row['perubahan_%']:+.2f}%</span><br>"
-                        f"Harga: Rp {row['harga']:,.0f} &nbsp;|&nbsp; RSI: {row['rsi']} "
-                        f"&nbsp;|&nbsp; Volume: {row['vol_ratio']:.2f}x avg20"
+                        f"<div class='radar-card {css_class}'>"
+                        f"<span class='radar-ticker'>{row['kode']}</span> "
+                        f"<span class='{badge_class}'>{row['perubahan_%']:+.2f}%</span>"
+                        f"<div class='radar-detail'>"
+                        f"Rp {row['harga']:,.0f} &nbsp;·&nbsp; RSI {row['rsi']} "
+                        f"&nbsp;·&nbsp; Vol {row['vol_ratio']:.2f}x avg20</div>"
                         f"</div>",
                         unsafe_allow_html=True,
                     )
