@@ -281,10 +281,26 @@ CUSTOM_CSS = """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 DEFAULT_WATCHLIST = [
-    "BBCA", "BBRI", "BMRI", "BBNI", "TLKM", "ASII", "UNVR", "ICBP",
-    "ANTM", "ADRO", "PGAS", "INDF", "KLBF", "SMGR", "PTBA", "MDKA",
-    "BRPT", "GOTO", "BUKA", "ARTO", "EMTK", "MEDC", "INCO", "TOWR",
-    "EXCL", "CPIN", "AMRT", "ITMG", "HRUM", "TPIA",
+    "BBCA", "BBRI", "BMRI", "BBNI", "BBTN", "BRIS", "BJBR", "BJTM", "BFIN", "PNBN",
+    "NISP", "MEGA", "BNGA", "BDMN", "ARTO", "BBHI", "BABP", "AGRO", "BTPS", "BNLI",
+    "UNVR", "ICBP", "INDF", "MYOR", "KLBF", "CPIN", "JPFA", "GGRM", "HMSP", "SIDO",
+    "AMRT", "MAPI", "ACES", "RALS", "ERAA", "MAPA", "ULTJ", "CMRY", "ROTI", "SKLT",
+    "ADRO", "PTBA", "ITMG", "HRUM", "MEDC", "PGAS", "ANTM", "INCO", "TINS", "MDKA",
+    "AMMN", "BRMS", "TPIA", "BRPT", "ELSA", "ENRG", "PSAB", "DOID", "BUMI", "MBAP",
+    "BSDE", "CTRA", "PWON", "SMRA", "APLN", "ASRI", "LPKR", "DMAS", "PANI", "BEST",
+    "WIKA", "WSKT", "PTPP", "ADHI", "JSMR", "TOTL", "WEGE", "NRCA", "ACST", "SSIA",
+    "TLKM", "EXCL", "ISAT", "TOWR", "TBIG", "MTEL", "GOTO", "BUKA", "EMTK", "MTDL",
+    "ASII", "AUTO", "IMAS", "SMSM", "GJTL", "BOLT", "INDS", "DRMA", "GDST", "ASGR",
+    "SMGR", "INTP", "SMBR", "SMCB", "ARNA", "WSBP", "WTON", "MARK", "CAKK", "KRAS",
+    "HEAL", "MIKA", "PRDA", "SILO", "SAME", "KAEF", "PEHA", "TSPC", "PYFA", "SOHO",
+    "AALI", "LSIP", "SIMP", "DSNG", "SGRO", "TBLA", "SMAR", "UNSP", "ANJT", "GZCO",
+    "BIRD", "SMDR", "TMAS", "ASSA", "IPCC", "SAFE", "CMPP", "GIAA", "HITS", "TRAM",
+    "SCMA", "MNCN", "VIVA", "MSKY", "FILM", "KBLV", "IPTV", "LINK", "MORA", "CENT",
+    "NCKL", "CBDK", "DEWA", "CUAN", "AADI", "BREN", "RAJA", "PGEO", "ADMR", "PTRO",
+    "ABMM", "DSSA", "ITMA", "MBSS", "SOCI", "KKGI", "FIRE", "GEMS", "TOBA", "IATA",
+    "CPRO", "STAR", "PANS", "YULE", "BOGA", "PZZA", "FAST", "MAPB", "HERO", "RANC",
+    "CLEO", "GOOD", "DLTA", "ADES", "STTP", "KINO", "WOOD", "IMPC", "UNIC", "EKAD",
+    "INKP", "TKIM", "SMPL", "ESSA", "AKRA", "MDIY", "CSAP", "LPPF", "TRIS", "MPPA",
 ]
 
 # ----------------------------------------------------------------------------
@@ -309,6 +325,29 @@ def fetch_history(kode: str, period: str = "9mo", interval: str = "1d") -> pd.Da
     df = df.dropna(how="all")
     df.index = pd.to_datetime(df.index)
     return df
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_history_batch(kodes: tuple, period: str = "4mo") -> dict:
+    """Ambil data banyak saham sekaligus (jauh lebih cepat daripada satu-satu)."""
+    yf_tickers = [to_yf_ticker(k) for k in kodes]
+    raw = yf.download(
+        tickers=yf_tickers, period=period, interval="1d",
+        group_by="ticker", threads=True, progress=False, auto_adjust=False,
+    )
+    result = {}
+    for kode, yft in zip(kodes, yf_tickers):
+        try:
+            if len(yf_tickers) == 1:
+                df = raw
+            else:
+                df = raw[yft]
+            df = df.dropna(how="all")
+            if not df.empty:
+                result[kode] = df
+        except Exception:
+            continue
+    return result
 
 
 def compute_ema(series: pd.Series, span: int) -> pd.Series:
@@ -703,12 +742,15 @@ with tab2:
 
     if scan_btn:
         results = []
-        progress = st.progress(0, text="Memulai scan...")
+        with st.spinner(f"Mengambil data {len(watchlist)} saham sekaligus (batch)..."):
+            batch_data = fetch_history_batch(tuple(watchlist), period="4mo")
+
+        progress = st.progress(0, text="Menganalisa sinyal...")
         for i, kode in enumerate(watchlist):
             progress.progress((i + 1) / len(watchlist), text=f"Menganalisa {kode}...")
             try:
-                raw = fetch_history(kode, period="4mo")
-                if raw.empty:
+                raw = batch_data.get(kode)
+                if raw is None or raw.empty:
                     continue
                 enriched = enrich_indicators(raw)
                 sig = evaluate_signals(enriched)
