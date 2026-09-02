@@ -293,50 +293,227 @@ CUSTOM_CSS = """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 DEFAULT_WATCHLIST = [
-    "BBCA", "BBRI", "BMRI", "BBNI", "BBTN", "BRIS", "BJBR", "BJTM", "BFIN", "PNBN",
-    "NISP", "MEGA", "BNGA", "BDMN", "ARTO", "BBHI", "BABP", "AGRO", "BTPS", "BNLI",
-    "UNVR", "ICBP", "INDF", "MYOR", "KLBF", "CPIN", "JPFA", "GGRM", "HMSP", "SIDO",
-    "AMRT", "MAPI", "ACES", "RALS", "ERAA", "MAPA", "ULTJ", "CMRY", "ROTI", "SKLT",
-    "ADRO", "PTBA", "ITMG", "HRUM", "MEDC", "PGAS", "ANTM", "INCO", "TINS", "MDKA",
-    "AMMN", "BRMS", "TPIA", "BRPT", "ELSA", "ENRG", "PSAB", "DOID", "BUMI", "MBAP",
-    "BSDE", "CTRA", "PWON", "SMRA", "APLN", "ASRI", "LPKR", "DMAS", "PANI", "BEST",
-    "WIKA", "WSKT", "PTPP", "ADHI", "JSMR", "TOTL", "WEGE", "NRCA", "ACST", "SSIA",
-    "TLKM", "EXCL", "ISAT", "TOWR", "TBIG", "MTEL", "GOTO", "BUKA", "EMTK", "MTDL",
-    "ASII", "AUTO", "IMAS", "SMSM", "GJTL", "BOLT", "INDS", "DRMA", "GDST", "ASGR",
-    "SMGR", "INTP", "SMBR", "SMCB", "ARNA", "WSBP", "WTON", "MARK", "CAKK", "KRAS",
-    "HEAL", "MIKA", "PRDA", "SILO", "SAME", "KAEF", "PEHA", "TSPC", "PYFA", "SOHO",
-    "AALI", "LSIP", "SIMP", "DSNG", "SGRO", "TBLA", "SMAR", "UNSP", "ANJT", "GZCO",
-    "BIRD", "SMDR", "TMAS", "ASSA", "IPCC", "SAFE", "CMPP", "GIAA", "HITS", "TRAM",
-    "SCMA", "MNCN", "VIVA", "MSKY", "FILM", "KBLV", "IPTV", "LINK", "MORA", "CENT",
-    "NCKL", "CBDK", "DEWA", "CUAN", "AADI", "BREN", "RAJA", "PGEO", "ADMR", "PTRO",
-    "ABMM", "DSSA", "ITMA", "MBSS", "SOCI", "KKGI", "FIRE", "GEMS", "TOBA", "IATA",
-    "CPRO", "STAR", "PANS", "YULE", "BOGA", "PZZA", "FAST", "MAPB", "HERO", "RANC",
-    "CLEO", "GOOD", "DLTA", "ADES", "STTP", "KINO", "WOOD", "IMPC", "UNIC", "EKAD",
-    "INKP", "TKIM", "SMPL", "ESSA", "AKRA", "MDIY", "CSAP", "LPPF", "TRIS", "MPPA",
+    "AADI", "AALI", "ABBA", "ABDA", "ABMM", "ACES", "ACRO", "ACST", "ADCP", "ADES",
+    "ADHI", "ADMF", "ADMG", "ADMR", "ADRO", "AEGS", "AGAR", "AGII", "AGRO", "AGRS",
+    "AHAP", "AIMS", "AISA", "AKKU", "AKPI", "AKRA", "AKSI", "ALDO", "ALII", "ALKA",
+    "ALMI", "ALTO", "AMAG", "AMAN", "AMAR", "AMFG", "AMIN", "AMMN", "AMMS", "AMOR",
+    "AMRT", "ANDI", "ANJT", "ANTM", "APEX", "APIC", "APII", "APLI", "APLN", "ARCI",
+    "AREA", "ARGO", "ARII", "ARKA", "ARKO", "ARMY", "ARNA", "ARTA", "ARTI", "ARTO",
+    "ASBI", "ASDM", "ASGR", "ASHA", "ASII", "ASJT", "ASLC", "ASLI", "ASMI", "ASPI",
+    "ASRI", "ASRM", "ASSA", "ATAP", "ATIC", "ATLA", "AUTO", "AVIA", "AWAN", "AXIO",
+    "AYAM", "AYLS", "BABP", "BABY", "BACA", "BAIK", "BAJA", "BALI", "BANK", "BAPA",
+    "BAPI", "BATA", "BATR", "BAUT", "BAYU", "BBCA", "BBHI", "BBKP", "BBLD", "BBMD",
+    "BBNI", "BBRI", "BBRM", "BBSI", "BBSS", "BBTN", "BBYB", "BCAP", "BCIC", "BCIP",
+    "BDKR", "BDMN", "BEBS", "BEEF", "BEER", "BEKS", "BELI", "BELL", "BESS", "BEST",
+    "BFIN", "BGTG", "BHAT", "BHIT", "BIKA", "BIKE", "BIMA", "BINA", "BINO", "BIPI",
+    "BIPP", "BIRD", "BISI", "BJBR", "BJTM", "BKDP", "BKSL", "BKSW", "BLES", "BLTA",
+    "BLTZ", "BLUE", "BMAS", "BMBL", "BMHS", "BMRI", "BMSR", "BMTR", "BNBA", "BNBR",
+    "BNGA", "BNII", "BNLI", "BOAT", "BOBA", "BOGA", "BOLA", "BOLT", "BOSS", "BPFI",
+    "BPII", "BPTR", "BRAM", "BREN", "BRIS", "BRMS", "BRNA", "BRPT", "BRRC", "BSBK",
+    "BSDE", "BSIM", "BSML", "BSSR", "BSWD", "BTEK", "BTEL", "BTON", "BTPN", "BTPS",
+    "BUAH", "BUDI", "BUKA", "BUKK", "BULL", "BUMI", "BUVA", "BVIC", "BWPT", "BYAN",
+    "CAKK", "CAMP", "CANI", "CARE", "CARS", "CASA", "CASH", "CASS", "CBDK", "CBMF",
+    "CBPE", "CBRE", "CBUT", "CCSI", "CEKA", "CENT", "CFIN", "CGAS", "CHEM", "CHIP",
+    "CINT", "CITA", "CITY", "CLAY", "CLEO", "CLPI", "CMNP", "CMNT", "CMPP", "CMRY",
+    "CNKO", "CNMA", "CNTX", "COAL", "COCO", "COWL", "CPIN", "CPRI", "CPRO", "CRAB",
+    "CRSN", "CSAP", "CSIS", "CSMI", "CSRA", "CTBN", "CTRA", "CTTH", "CUAN", "CYBR",
+    "DAAZ", "DADA", "DART", "DATA", "DAYA", "DCII", "DEAL", "DEFI", "DEPO", "DEWA",
+    "DEWI", "DFAM", "DGIK", "DGNS", "DGWG", "DIGI", "DILD", "DIVA", "DKFT", "DLTA",
+    "DMAS", "DMMX", "DMND", "DNAR", "DNET", "DOID", "DOOH", "DOSS", "DPNS", "DPUM",
+    "DRMA", "DSFI", "DSNG", "DSSA", "DUCK", "DUTI", "DVLA", "DWGL", "DYAN", "EAST",
+    "ECII", "EDGE", "EKAD", "ELIT", "ELPI", "ELSA", "ELTY", "EMDE", "EMTK", "ENAK",
+    "ENRG", "ENVY", "ENZO", "EPAC", "EPMT", "ERAA", "ERAL", "ERTX", "ESIP", "ESSA",
+    "ESTA", "ESTI", "ETWA", "EURO", "EXCL", "FAPA", "FAST", "FASW", "FILM", "FIMP",
+    "FIRE", "FISH", "FITT", "FLMC", "FMII", "FOLK", "FOOD", "FORU", "FORZ", "FPNI",
+    "FREN", "FUJI", "FUTR", "FWCT", "GAMA", "GDST", "GDYR", "GEMA", "GEMS", "GGRM",
+    "GGRP", "GHON", "GIAA", "GJTL", "GLOB", "GLVA", "GMFI", "GMTD", "GOLD", "GOLF",
+    "GOLL", "GOOD", "GOTO", "GPRA", "GPSO", "GRIA", "GRPH", "GRPM", "GSMF", "GTBO",
+    "GTRA", "GTSI", "GULA", "GUNA", "GWSA", "GZCO", "HADE", "HAIS", "HAJJ", "HALO",
+    "HATM", "HBAT", "HDFA", "HDIT", "HDTX", "HEAL", "HELI", "HERO", "HEXA", "HGII",
+    "HILL", "HITS", "HKMU", "HMSP", "HOKI", "HOME", "HOMI", "HOPE", "HOTL", "HRME",
+    "HRTA", "HRUM", "HUMI", "HYGN", "IATA", "IBFN", "IBOS", "IBST", "ICBP", "ICON",
+    "IDEA", "IDPR", "IFII", "IFSH", "IGAR", "IIKP", "IKAI", "IKAN", "IKBI", "IKPM",
+    "IMAS", "IMJS", "IMPC", "INAF", "INAI", "INCF", "INCI", "INCO", "INDF", "INDO",
+    "INDR", "INDS", "INDX", "INDY", "INET", "INKP", "INOV", "INPC", "INPP", "INPS",
+    "INRU", "INTA", "INTD", "INTP", "IOTF", "IPAC", "IPCC", "IPCM", "IPOL", "IPPE",
+    "IPTV", "IRRA", "IRSX", "ISAP", "ISAT", "ISEA", "ISSP", "ITIC", "ITMA", "ITMG",
+    "JARR", "JAST", "JATI", "JAWA", "JAYA", "JECC", "JGLE", "JIHD", "JKON", "JKSW",
+    "JMAS", "JPFA", "JRPT", "JSKY", "JSMR", "JSPT", "JTPE", "KAEF", "KARW", "KAYU",
+    "KBAG", "KBLI", "KBLM", "KBLV", "KBRI", "KDSI", "KDTN", "KEEN", "KEJU", "KETR",
+    "KIAS", "KICI", "KIJA", "KING", "KINO", "KIOS", "KJEN", "KKES", "KKGI", "KLAS",
+    "KLBF", "KLIN", "KMDS", "KMTR", "KOBX", "KOCI", "KOIN", "KOKA", "KONI", "KOPI",
+    "KOTA", "KPAL", "KPAS", "KPIG", "KRAH", "KRAS", "KREN", "KRYA", "KSIX", "KUAS",
+    "LABA", "LABS", "LAJU", "LAND", "LAPD", "LCGP", "LCKM", "LEAD", "LFLO", "LIFE",
+    "LINK", "LION", "LIVE", "LMAS", "LMAX", "LMPI", "LMSH", "LOPI", "LPCK", "LPGI",
+    "LPIN", "LPKR", "LPLI", "LPPF", "LPPS", "LRNA", "LSIP", "LTLS", "LUCK", "LUCY",
+    "MABA", "MAGP", "MAHA", "MAIN", "MAMI", "MANG", "MAPA", "MAPB", "MAPI", "MARI",
+    "MARK", "MASA", "MASB", "MAXI", "MAYA", "MBAP", "MBMA", "MBSS", "MBTO", "MCAS",
+    "MCOL", "MCOR", "MDIA", "MDIY", "MDKA", "MDKI", "MDLN", "MDRN", "MEDC", "MEDS",
+    "MEGA", "MEJA", "MENN", "MERK", "META", "MFIN", "MFMI", "MGLV", "MGNA", "MGRO",
+    "MHKI", "MICE", "MIDI", "MIKA", "MINA", "MIRA", "MITI", "MKAP", "MKNT", "MKPI",
+    "MKTR", "MLBI", "MLIA", "MLPL", "MLPT", "MMIX", "MMLP", "MNCN", "MOLI", "MORA",
+    "MPIX", "MPMX", "MPOW", "MPPA", "MPRO", "MPXL", "MRAT", "MREI", "MSIE", "MSIN",
+    "MSJA", "MSKY", "MSTI", "MTDL", "MTEL", "MTFN", "MTLA", "MTMH", "MTPS", "MTRA",
+    "MTSM", "MTWI", "MUTU", "MYOH", "MYOR", "MYRX", "MYTX", "NAIK", "NANO", "NASA",
+    "NASI", "NATO", "NAYZ", "NCKL", "NELY", "NEST", "NETV", "NFCX", "NICE", "NICK",
+    "NICL", "NIKL", "NINE", "NIPS", "NIRO", "NISP", "NOBU", "NPGF", "NRCA", "NSSS",
+    "NTBK", "NUSA", "NZIA", "OASA", "OBAT", "OBMD", "OCAP", "OILS", "OKAS", "OLIV",
+    "OMED", "OMRE", "OPMS", "PACK", "PADA", "PADI", "PALM", "PAMG", "PANI", "PANR",
+    "PANS", "PART", "PBID", "PBRX", "PBSA", "PCAR", "PDES", "PDPP", "PEGE", "PEHA",
+    "PEVE", "PGAS", "PGEO", "PGJO", "PGLI", "PGUN", "PICO", "PIPA", "PJAA", "PKPK",
+    "PLAN", "PLAS", "PLIN", "PMJS", "PMMP", "PNBN", "PNBS", "PNGO", "PNIN", "PNLF",
+    "PNSE", "POLA", "POLI", "POLL", "POLU", "POLY", "POOL", "PORT", "POSA", "POWR",
+    "PPGL", "PPRE", "PPRI", "PPRO", "PRAS", "PRAY", "PRDA", "PRIM", "PSAB", "PSDN",
+    "PSGO", "PSKT", "PSSI", "PTBA", "PTDU", "PTIS", "PTMP", "PTMR", "PTPP", "PTPS",
+    "PTPW", "PTRO", "PTSN", "PTSP", "PUDP", "PURA", "PURE", "PURI", "PWON", "PYFA",
+    "PZZA", "RAAM", "RAFI", "RAJA", "RALS", "RANC", "RATU", "RBMS", "RCCC", "RDTX",
+    "REAL", "RELF", "RELI", "RGAS", "RICY", "RIGS", "RIMO", "RISE", "RMKE", "RMKO",
+    "ROCK", "RODA", "RONY", "ROTI", "RSCH", "RSGK", "RUIS", "RUNS", "SAFE", "SAGE",
+    "SAME", "SAMF", "SAPX", "SATU", "SBAT", "SBMA", "SCCO", "SCMA", "SCNP", "SCPI",
+    "SDMU", "SDPC", "SDRA", "SEMA", "SFAN", "SGER", "SGRO", "SHID", "SHIP", "SICO",
+    "SIDO", "SILO", "SIMA", "SIMP", "SINI", "SIPD", "SKBM", "SKLT", "SKRN", "SKYB",
+    "SLIS", "SMAR", "SMBR", "SMCB", "SMDM", "SMDR", "SMGA", "SMGR", "SMIL", "SMKL",
+    "SMKM", "SMLE", "SMMA", "SMMT", "SMRA", "SMRU", "SMSM", "SNLK", "SOCI", "SOFA",
+    "SOHO", "SOLA", "SONA", "SOSS", "SOTS", "SOUL", "SPMA", "SPRE", "SPTO", "SQMI",
+    "SRAJ", "SRIL", "SRSN", "SRTG", "SSIA", "SSMS", "SSTM", "STAA", "STAR", "STRK",
+    "STTP", "SUGI", "SULI", "SUNI", "SUPR", "SURE", "SURI", "SWAT", "SWID", "TALF",
+    "TAMA", "TAMU", "TAPG", "TARA", "TAXI", "TAYS", "TBIG", "TBLA", "TBMS", "TCID",
+    "TCPI", "TDPM", "TEBE", "TECH", "TELE", "TFAS", "TFCO", "TGKA", "TGRA", "TGUK",
+    "TIFA", "TINS", "TIRA", "TIRT", "TKIM", "TLDN", "TLKM", "TMAS", "TMPO", "TNCA",
+    "TOBA", "TOOL", "TOPS", "TOSK", "TOTL", "TOTO", "TOWR", "TOYS", "TPIA", "TPMA",
+    "TRAM", "TRGU", "TRIL", "TRIM", "TRIN", "TRIO", "TRIS", "TRJA", "TRON", "TRST",
+    "TRUE", "TRUK", "TRUS", "TSPC", "TUGU", "TYRE", "UANG", "UCID", "UDNG", "UFOE",
+    "ULTJ", "UNIC", "UNIQ", "UNIT", "UNSP", "UNTD", "UNTR", "UNVR", "URBN", "UVCR",
+    "VAST", "VERN", "VICI", "VICO", "VINS", "VISI", "VIVA", "VKTR", "VOKS", "VRNA",
+    "VTNY", "WAPO", "WEGE", "WEHA", "WGSH", "WICO", "WIDI", "WIFI", "WIIM", "WIKA",
+    "WINE", "WINR", "WINS", "WIRG", "WMPP", "WMUU", "WOMF", "WOOD", "WOWS", "WSBP",
+    "WSKT", "WTON", "YELO", "YOII", "YPAS", "YULE", "ZATA", "ZBRA", "ZINC", "ZONE",
+    "ZYRX",
 ]
 
 SECTOR_GROUPS = {
-    "Perbankan & Keuangan": ["BBCA", "BBRI", "BMRI", "BBNI", "BBTN", "BRIS", "BJBR", "BJTM", "BFIN", "PNBN",
-                             "NISP", "MEGA", "BNGA", "BDMN", "ARTO", "BBHI", "BABP", "AGRO", "BTPS", "BNLI"],
-    "Consumer & Ritel": ["UNVR", "ICBP", "INDF", "MYOR", "KLBF", "CPIN", "JPFA", "GGRM", "HMSP", "SIDO",
-                         "AMRT", "MAPI", "ACES", "RALS", "ERAA", "MAPA", "ULTJ", "CMRY", "ROTI", "SKLT"],
-    "Energi & Tambang": ["ADRO", "PTBA", "ITMG", "HRUM", "MEDC", "PGAS", "ANTM", "INCO", "TINS", "MDKA",
-                         "AMMN", "BRMS", "TPIA", "BRPT", "ELSA", "ENRG", "PSAB", "DOID", "BUMI", "MBAP",
-                         "NCKL", "CBDK", "DEWA", "CUAN", "AADI", "BREN", "RAJA", "PGEO", "ADMR", "PTRO",
-                         "ABMM", "DSSA", "ITMA", "MBSS", "SOCI", "KKGI", "FIRE", "GEMS", "TOBA", "IATA"],
-    "Properti & Konstruksi": ["BSDE", "CTRA", "PWON", "SMRA", "APLN", "ASRI", "LPKR", "DMAS", "PANI", "BEST",
-                              "WIKA", "WSKT", "PTPP", "ADHI", "JSMR", "TOTL", "WEGE", "NRCA", "ACST", "SSIA"],
-    "Telko & Teknologi": ["TLKM", "EXCL", "ISAT", "TOWR", "TBIG", "MTEL", "GOTO", "BUKA", "EMTK", "MTDL"],
-    "Otomotif & Industri": ["ASII", "AUTO", "IMAS", "SMSM", "GJTL", "BOLT", "INDS", "DRMA", "GDST", "ASGR"],
-    "Semen & Material": ["SMGR", "INTP", "SMBR", "SMCB", "ARNA", "WSBP", "WTON", "MARK", "CAKK", "KRAS"],
-    "Kesehatan": ["HEAL", "MIKA", "PRDA", "SILO", "SAME", "KAEF", "PEHA", "TSPC", "PYFA", "SOHO"],
-    "Perkebunan & Agrikultur": ["AALI", "LSIP", "SIMP", "DSNG", "SGRO", "TBLA", "SMAR", "UNSP", "ANJT", "GZCO"],
-    "Transportasi & Logistik": ["BIRD", "SMDR", "TMAS", "ASSA", "IPCC", "SAFE", "CMPP", "GIAA", "HITS", "TRAM"],
-    "Media & Hiburan": ["SCMA", "MNCN", "VIVA", "MSKY", "FILM", "KBLV", "IPTV", "LINK", "MORA", "CENT"],
-    "Consumer Lainnya": ["CPRO", "STAR", "PANS", "YULE", "BOGA", "PZZA", "FAST", "MAPB", "HERO", "RANC",
-                         "CLEO", "GOOD", "DLTA", "ADES", "STTP", "KINO", "WOOD", "IMPC", "UNIC", "EKAD"],
-    "Kertas & Kimia": ["INKP", "TKIM", "SMPL", "ESSA", "AKRA", "MDIY", "CSAP", "LPPF", "TRIS", "MPPA"],
+    "Teknologi": [
+        "AREA", "ATIC", "AWAN", "AXIO", "BELI", "BUKA", "CASH", "CHIP", "CYBR", "DCII",
+        "DIVA", "DMMX", "EDGE", "ELIT", "EMTK", "ENVY", "GLVA", "GOTO", "HDIT", "IOTF",
+        "IRSX", "JATI", "KIOS", "KREN", "LMAS", "LUCK", "MCAS", "MENN", "MLPT", "MPIX",
+        "MSTI", "MTDL", "NFCX", "NINE", "PGJO", "PTSN", "RUNS", "SKYB", "TECH", "TFAS",
+        "TOSK", "TRON", "UVCR", "WGSH", "WIFI", "WIRG", "ZYRX",
+    ],
+    "Energi": [
+        "ABMM", "ADMR", "ADRO", "AIMS", "AKRA", "ALII", "APEX", "ARII", "ARTI", "ATLA",
+        "BBRM", "BESS", "BIPI", "BOSS", "BSML", "BSSR", "BULL", "BUMI", "BYAN", "CANI",
+        "CBRE", "CGAS", "CNKO", "COAL", "CUAN", "DEWA", "DOID", "DSSA", "DWGL", "ELSA",
+        "ENRG", "FIRE", "GEMS", "GTBO", "GTSI", "HILL", "HITS", "HRUM", "HUMI", "IATA",
+        "INDY", "INPS", "ITMA", "ITMG", "JSKY", "KKGI", "KOPI", "LEAD", "MAHA", "MBAP",
+        "MBSS", "MCOL", "MEDC", "MKAP", "MTFN", "MYOH", "PGAS", "PKPK", "PSSI", "PTBA",
+        "PTIS", "PTRO", "RAJA", "RGAS", "RIGS", "RMKE", "RMKO", "RUIS", "SEMA", "SGER",
+        "SHIP", "SICO", "SMMT", "SMRU", "SOCI", "SUGI", "SUNI", "SURE", "TAMU", "TCPI",
+        "TEBE", "TOBA", "TPMA", "TRAM", "UNIQ", "WINS", "WOWS",
+    ],
+    "Consumer Cyclicals": [
+        "ABBA", "ACES", "ACRO", "AEGS", "AKKU", "ARGO", "ARTA", "ASLC", "AUTO", "BABY",
+        "BAIK", "BATA", "BAUT", "BAYU", "BELL", "BIKE", "BIMA", "BLTZ", "BMBL", "BMTR",
+        "BOGA", "BOLA", "BOLT", "BRAM", "BUVA", "CARS", "CBMF", "CINT", "CLAY", "CNMA",
+        "CNTX", "CSAP", "CSMI", "DEPO", "DFAM", "DIGI", "DOOH", "DRMA", "DUCK", "EAST",
+        "ECII", "ENAK", "ERAA", "ERAL", "ERTX", "ESTA", "ESTI", "FAST", "FILM", "FITT",
+        "FORU", "FUTR", "GDYR", "GEMA", "GJTL", "GLOB", "GOLF", "GRPH", "GWSA", "HAJJ",
+        "HDTX", "HOME", "HOTL", "HRME", "HRTA", "IDEA", "IIKP", "IMAS", "INDR", "INDS",
+        "INOV", "IPTV", "ISAP", "JGLE", "JIHD", "JSPT", "KDTN", "KICI", "KLIN", "KOTA",
+        "KPIG", "LFLO", "LIVE", "LMAX", "LMPI", "LPIN", "LPPF", "LUCY", "MABA", "MAMI",
+        "MAPA", "MAPB", "MAPI", "MARI", "MASA", "MDIA", "MEJA", "MGLV", "MGNA", "MICE",
+        "MINA", "MKNT", "MNCN", "MPMX", "MSIN", "MSKY", "MYTX", "NATO", "NETV", "NIPS",
+        "NUSA", "OLIV", "PANR", "PART", "PBRX", "PDES", "PGLI", "PJAA", "PLAN", "PMJS",
+        "PNSE", "POLU", "POLY", "PRAS", "PSKT", "PTSP", "PZZA", "RAAM", "RAFI", "RALS",
+        "RICY", "SBAT", "SCMA", "SCNP", "SHID", "SLIS", "SMSM", "SNLK", "SOFA", "SONA",
+        "SOTS", "SPRE", "SRIL", "SSTM", "SWID", "TELE", "TFCO", "TMPO", "TOOL", "TOYS",
+        "TRIO", "TRIS", "TYRE", "UFOE", "UNIT", "UNTD", "VIVA", "VKTR", "WOOD", "YELO",
+        "ZATA", "ZONE",
+    ],
+    "Basic Materials": [
+        "ADMG", "AGII", "AKPI", "ALDO", "ALKA", "ALMI", "AMMN", "ANTM", "APLI", "ARCI",
+        "AVIA", "AYLS", "BAJA", "BATR", "BEBS", "BLES", "BMSR", "BRMS", "BRNA", "BRPT",
+        "BTON", "CHEM", "CITA", "CLPI", "CMNT", "CTBN", "DKFT", "DPNS", "EKAD", "EPAC",
+        "ESIP", "ESSA", "ETWA", "FASW", "FPNI", "FWCT", "GDST", "GGRP", "HKMU", "IFII",
+        "IFSH", "IGAR", "INAI", "INCF", "INCI", "INCO", "INKP", "INRU", "INTD", "INTP",
+        "IPOL", "ISSP", "JKSW", "KAYU", "KBRI", "KDSI", "KKES", "KMTR", "KRAS", "LMSH",
+        "LTLS", "MBMA", "MDKA", "MDKI", "MOLI", "NCKL", "NICE", "NICL", "NIKL", "NPGF",
+        "OBMD", "OKAS", "OPMS", "PACK", "PBID", "PDPP", "PICO", "PPRI", "PSAB", "PURE",
+        "SAMF", "SBMA", "SIMA", "SMBR", "SMCB", "SMGA", "SMGR", "SMKL", "SMLE", "SOLA",
+        "SPMA", "SQMI", "SRSN", "SULI", "SWAT", "TALF", "TBMS", "TDPM", "TINS", "TIRT",
+        "TKIM", "TPIA", "TRST", "UNIC", "WSBP", "WTON", "YPAS", "ZINC",
+    ],
+    "Perbankan & Keuangan": [
+        "ABDA", "ADMF", "AGRO", "AGRS", "AHAP", "AMAG", "AMAR", "AMOR", "APIC", "ARTO",
+        "ASBI", "ASDM", "ASJT", "ASMI", "ASRM", "BABP", "BACA", "BANK", "BBCA", "BBHI",
+        "BBKP", "BBLD", "BBMD", "BBNI", "BBRI", "BBSI", "BBTN", "BBYB", "BCAP", "BCIC",
+        "BDMN", "BEKS", "BFIN", "BGTG", "BHAT", "BINA", "BJBR", "BJTM", "BKSW", "BMAS",
+        "BMRI", "BNBA", "BNGA", "BNII", "BNLI", "BPFI", "BPII", "BRIS", "BSIM", "BSWD",
+        "BTPN", "BTPS", "BVIC", "CASA", "CFIN", "DEFI", "DNAR", "DNET", "FUJI", "GSMF",
+        "HDFA", "INPC", "JMAS", "LIFE", "LPGI", "LPPS", "MASB", "MAYA", "MCOR", "MEGA",
+        "MFIN", "MREI", "MTWI", "NICK", "NISP", "NOBU", "OCAP", "PADI", "PALM", "PANS",
+        "PEGE", "PLAS", "PNBN", "PNBS", "PNIN", "PNLF", "POLA", "POOL", "RELI", "SDRA",
+        "SFAN", "SMMA", "SRTG", "STAR", "TIFA", "TRIM", "TRUS", "TUGU", "VICO", "VINS",
+        "VRNA", "VTNY", "WOMF", "YULE",
+    ],
+    "Kesehatan": [
+        "BMHS", "CARE", "DGNS", "DVLA", "HALO", "HEAL", "IKPM", "INAF", "IRRA", "KAEF",
+        "KLBF", "LABS", "MEDS", "MERK", "MIKA", "MMIX", "MTMH", "OMED", "PEHA", "PEVE",
+        "PRAY", "PRDA", "PRIM", "PYFA", "RSCH", "RSGK", "SAME", "SCPI", "SIDO", "SILO",
+        "SOHO", "SRAJ", "SURI", "TSPC",
+    ],
+    "Infrastruktur": [
+        "ACST", "ADHI", "ARKO", "ASLI", "BALI", "BDKR", "BREN", "BTEL", "BUKK", "CASS",
+        "CENT", "CMNP", "DATA", "DGIK", "EXCL", "FIMP", "FREN", "GHON", "GMFI", "GOLD",
+        "HADE", "IBST", "IDPR", "INET", "IPCC", "IPCM", "ISAT", "JAST", "JKON", "JSMR",
+        "KARW", "KBLV", "KEEN", "KETR", "KOKA", "KRYA", "LCKM", "LINK", "MANG", "META",
+        "MORA", "MPOW", "MTEL", "MTPS", "MTRA", "NRCA", "OASA", "PBSA", "PGEO", "PORT",
+        "POWR", "PPRE", "PTDU", "PTPP", "PTPW", "RONY", "SMKM", "SSIA", "SUPR", "TAMA",
+        "TBIG", "TGRA", "TLKM", "TOPS", "TOTL", "TOWR", "WEGE", "WIKA", "WSKT",
+    ],
+    "Properti & Real Estate": [
+        "ADCP", "AMAN", "APLN", "ARMY", "ASPI", "ASRI", "ATAP", "BAPA", "BAPI", "BBSS",
+        "BCIP", "BEST", "BIKA", "BIPP", "BKDP", "BKSL", "BSBK", "BSDE", "CBPE", "CITY",
+        "COWL", "CPRI", "CSIS", "CTRA", "DADA", "DART", "DILD", "DMAS", "DUTI", "ELTY",
+        "EMDE", "FMII", "FORZ", "GAMA", "GMTD", "GPRA", "GRIA", "HBAT", "HOMI", "INDO",
+        "INPP", "IPAC", "JRPT", "KBAG", "KIJA", "KOCI", "LAND", "LCGP", "LPCK", "LPKR",
+        "LPLI", "MDLN", "MKPI", "MMLP", "MPRO", "MSIE", "MTLA", "MTSM", "MYRX", "NASA",
+        "NIRO", "NZIA", "OMRE", "PAMG", "PANI", "PLIN", "POLI", "POLL", "POSA", "PPRO",
+        "PUDP", "PURI", "PWON", "RBMS", "RDTX", "REAL", "RELF", "RIMO", "RISE", "ROCK",
+        "RODA", "SAGE", "SATU", "SMDM", "SMRA", "TARA", "TRIN", "TRUE", "UANG", "URBN",
+        "VAST", "WINR",
+    ],
+    "Consumer Non-Cyclicals": [
+        "AALI", "ADES", "AGAR", "AISA", "ALTO", "AMMS", "AMRT", "ANDI", "ANJT", "ASHA",
+        "AYAM", "BEEF", "BEER", "BISI", "BOBA", "BTEK", "BUAH", "BUDI", "BWPT", "CAMP",
+        "CBUT", "CEKA", "CLEO", "CMRY", "COCO", "CPIN", "CPRO", "CRAB", "CSRA", "DAYA",
+        "DEWI", "DLTA", "DMND", "DPUM", "DSFI", "DSNG", "ENZO", "EPMT", "EURO", "FAPA",
+        "FISH", "FLMC", "FOOD", "GGRM", "GOLL", "GOOD", "GRPM", "GULA", "GUNA", "GZCO",
+        "HERO", "HMSP", "HOKI", "IBOS", "ICBP", "IKAN", "INDF", "IPPE", "ISEA", "ITIC",
+        "JARR", "JAWA", "JPFA", "KEJU", "KINO", "KMDS", "KPAS", "LAPD", "LSIP", "MAGP",
+        "MAIN", "MAXI", "MBTO", "MGRO", "MIDI", "MKTR", "MLBI", "MLPL", "MPPA", "MRAT",
+        "MSJA", "MYOR", "NANO", "NASI", "NAYZ", "NSSS", "OILS", "PCAR", "PGUN", "PMMP",
+        "PNGO", "PSDN", "PSGO", "PTPS", "RANC", "ROTI", "SDPC", "SGRO", "SIMP", "SIPD",
+        "SKBM", "SKLT", "SMAR", "SOUL", "SSMS", "STAA", "STRK", "STTP", "TAPG", "TAYS",
+        "TBLA", "TCID", "TGKA", "TGUK", "TLDN", "TRGU", "UCID", "UDNG", "ULTJ", "UNSP",
+        "UNVR", "VICI", "WAPO", "WICO", "WIIM", "WINE", "WMPP", "WMUU",
+    ],
+    "Industri": [
+        "AMFG", "AMIN", "APII", "ARKA", "ARNA", "ASGR", "ASII", "BHIT", "BINO", "BLUE",
+        "BNBR", "CAKK", "CCSI", "CRSN", "CTTH", "DYAN", "FOLK", "GPSO", "HEXA", "HOPE",
+        "HYGN", "IBFN", "ICON", "IKAI", "IKBI", "IMPC", "INDX", "INTA", "JECC", "JTPE",
+        "KBLI", "KBLM", "KIAS", "KING", "KOBX", "KOIN", "KONI", "KPAL", "KRAH", "KUAS",
+        "LABA", "LION", "MARK", "MDRN", "MFMI", "MHKI", "MLIA", "MUTU", "NTBK", "PADA",
+        "PIPA", "PTMP", "SCCO", "SINI", "SKRN", "SMIL", "SOSS", "SPTO", "TIRA", "TOTO",
+        "TRIL", "UNTR", "VISI", "VOKS", "WIDI", "ZBRA",
+    ],
+    "Transportasi & Logistik": [
+        "AKSI", "ASSA", "BIRD", "BLTA", "BPTR", "CMPP", "DEAL", "ELPI", "GIAA", "GTRA",
+        "HAIS", "HATM", "HELI", "IMJS", "JAYA", "KJEN", "KLAS", "LAJU", "LOPI", "LRNA",
+        "MIRA", "MITI", "MPXL", "NELY", "PPGL", "PURA", "RCCC", "SAFE", "SAPX", "SDMU",
+        "SMDR", "TAXI", "TMAS", "TNCA", "TRJA", "TRUK", "WEHA",
+    ],
 }
+
 SECTOR_MAP = {kode: sektor for sektor, kodes in SECTOR_GROUPS.items() for kode in kodes}
 
 
@@ -713,11 +890,19 @@ watchlist_input = st.sidebar.text_area(
     height=110,
 )
 watchlist = [x.strip().upper() for x in watchlist_input.split(",") if x.strip()]
-st.query_params["wl"] = "_".join(watchlist)
+
+# Cuma simpan ke URL kalau watchlist beda dari default (biar URL nggak jadi super panjang
+# kalau kamu pakai default 951 saham). Custom watchlist yang lebih kecil tetap ke-bookmark normal.
+if set(watchlist) != set(DEFAULT_WATCHLIST):
+    st.query_params["wl"] = "_".join(watchlist)
+elif "wl" in st.query_params:
+    del st.query_params["wl"]
+
 st.sidebar.caption(
-    "💾 Watchlist otomatis kesimpen di URL browser — **bookmark halaman ini** "
-    "biar watchlist kamu otomatis ke-load lagi kapan pun kamu buka linknya."
+    "💾 Kalau kamu custom-edit watchlist (bukan default 951 saham), otomatis kesimpen di URL browser — "
+    "**bookmark halaman ini** biar watchlist custom kamu otomatis ke-load lagi."
 )
+st.sidebar.caption(f"📋 Total saham di watchlist saat ini: **{len(watchlist)}**")
 
 liquidity_min_miliar = st.sidebar.slider(
     "Minimum rata-rata nilai transaksi harian (Miliar Rp)",
@@ -1007,6 +1192,8 @@ with tab2:
     st.markdown("### 🎯 Radar Saham Harian")
     st.caption("Scan watchlist untuk sinyal **Breakout**, **Bounce/Rebound**, dan **Volume Spike**.")
 
+    if len(watchlist) > 300:
+        st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — scan pertama bisa makan waktu beberapa menit. Hasil akan di-cache 5 menit.")
     scan_btn = st.button("🔍 Scan Watchlist Sekarang", type="primary")
 
     if scan_btn:
@@ -1147,6 +1334,8 @@ with tab3:
     st.markdown("#### 📡 Market Breadth & Heatmap Sektor")
     st.caption("Berdasarkan pergerakan harga hari terakhir dari seluruh saham di watchlist kamu.")
 
+    if len(watchlist) > 300:
+        st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — proses ini bisa makan waktu beberapa menit.")
     breadth_btn = st.button("🔄 Muat Data Market", type="primary", key="breadth_btn")
 
     if breadth_btn:
@@ -1331,6 +1520,8 @@ with tab4:
         with f_col3:
             max_per = st.number_input("Max PER (0 = tanpa batas)", value=0, step=1)
 
+        if len(watchlist) > 300:
+            st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — fetch data fundamental (1 request per saham) bisa makan waktu cukup lama di scan pertama. Hasil di-cache 12 jam.")
         screener_btn = st.button("🔍 Scan Fundamental Watchlist", type="primary", key="fund_screener_btn")
 
         if screener_btn:
