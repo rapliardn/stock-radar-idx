@@ -650,22 +650,14 @@ def format_rupiah_ringkas(value: float) -> str:
     return f"{value:,.0f}"
 
 
-def evaluate_signals(df: pd.DataFrame, min_avg_value_rp: float = 0) -> dict:
-    """Cek sinyal radar sederhana: breakout, bounce, volume spike."""
-    if len(df) < 25:
-        return {}
-
-    last = df.iloc[-1]
-    prev = df.iloc[-2]
-
-    # Filter likuiditas: skip saham dengan rata-rata nilai transaksi 20 hari di bawah ambang
+def detect_signals_at_row(last, prev, min_avg_value_rp: float = 0) -> list:
+    """Deteksi sinyal di satu baris data (row 'last' dengan konteks 'prev').
+    Dipisah dari evaluate_signals supaya bisa dipakai ulang untuk backtest tanpa re-slice dataframe."""
     avg_value = last["AvgValue20"] if pd.notna(last["AvgValue20"]) else 0
     if avg_value < min_avg_value_rp:
-        return {}
+        return []
 
     vol_ratio = last["Volume"] / last["VolAvg20"] if last["VolAvg20"] and last["VolAvg20"] > 0 else 0
-    price_chg_pct = (last["Close"] - prev["Close"]) / prev["Close"] * 100 if prev["Close"] else 0
-
     signals = []
 
     # Breakout: tembus resistance 20 hari dengan volume tinggi
@@ -683,8 +675,24 @@ def evaluate_signals(df: pd.DataFrame, min_avg_value_rp: float = 0) -> dict:
     if vol_ratio >= 2:
         signals.append("Volume Spike")
 
+    return signals
+
+
+def evaluate_signals(df: pd.DataFrame, min_avg_value_rp: float = 0) -> dict:
+    """Cek sinyal radar sederhana: breakout, bounce, volume spike (baris terakhir saja)."""
+    if len(df) < 25:
+        return {}
+
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+
+    signals = detect_signals_at_row(last, prev, min_avg_value_rp=min_avg_value_rp)
     if not signals:
         return {}
+
+    avg_value = last["AvgValue20"] if pd.notna(last["AvgValue20"]) else 0
+    vol_ratio = last["Volume"] / last["VolAvg20"] if last["VolAvg20"] and last["VolAvg20"] > 0 else 0
+    price_chg_pct = (last["Close"] - prev["Close"]) / prev["Close"] * 100 if prev["Close"] else 0
 
     return {
         "harga": last["Close"],
@@ -694,6 +702,40 @@ def evaluate_signals(df: pd.DataFrame, min_avg_value_rp: float = 0) -> dict:
         "vol_ratio": round(vol_ratio, 2),
         "sinyal": signals,
     }
+
+
+def backtest_signals_single(df_enriched: pd.DataFrame, kode: str, horizon_days: int = 10,
+                             min_avg_value_rp: float = 0) -> list:
+    """Backtest sinyal untuk 1 saham. Karena semua indikator di df_enriched bersifat causal
+    (rolling/EMA cuma pakai data masa lalu), kita bisa langsung loop baris tanpa re-slice."""
+    trades = []
+    n = len(df_enriched)
+    if n < 30:
+        return trades
+
+    for i in range(25, n - horizon_days):
+        last = df_enriched.iloc[i]
+        prev = df_enriched.iloc[i - 1]
+        signals = detect_signals_at_row(last, prev, min_avg_value_rp=min_avg_value_rp)
+        if not signals:
+            continue
+
+        entry_price = last["Close"]
+        exit_price = df_enriched["Close"].iloc[i + horizon_days]
+        if entry_price == 0 or pd.isna(entry_price) or pd.isna(exit_price):
+            continue
+        ret_pct = (exit_price - entry_price) / entry_price * 100
+
+        for s in signals:
+            trades.append({
+                "kode": kode,
+                "tanggal": df_enriched.index[i],
+                "sinyal": s,
+                "harga_entry": entry_price,
+                "harga_exit": exit_price,
+                "return_pct": ret_pct,
+            })
+    return trades
 
 
 def trend_label(last_row) -> str:
@@ -977,8 +1019,8 @@ with h_right:
     )
 
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 Analisa Saham", "🎯 Radar Harian", "🗺️ Overview IHSG", "🧮 Fundamental", "📰 Berita IHSG & Global",
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📊 Analisa Saham", "🎯 Radar Harian", "🗺️ Overview IHSG", "🧮 Fundamental", "📰 Berita IHSG & Global", "🧪 Backtest",
 ])
 
 # ----------------------------------------------------------------------------
@@ -1601,6 +1643,131 @@ with tab5:
                 f"<div class='news-source'>{n['source']} • {n['published']}</div></div>",
                 unsafe_allow_html=True,
             )
+
+# ----------------------------------------------------------------------------
+# TAB 6 — BACKTEST SINYAL HISTORIS
+# ----------------------------------------------------------------------------
+with tab6:
+    st.markdown("### 🧪 Backtest Sinyal Historis")
+    st.caption(
+        "Cek seberapa akurat sinyal Breakout / Bounce / Volume Spike kita secara historis. "
+        "Untuk setiap sinyal yang terdeteksi di masa lalu, kita lihat berapa return harga N hari setelahnya."
+    )
+    st.caption(
+        "⚠️ Ini backtest murni harga (tanpa fee transaksi, tanpa slippage, tanpa mempertimbangkan Stop Loss/Target "
+        "secara ketat — cuma return harga polos di N hari ke depan). Performa masa lalu juga tidak menjamin hasil ke depan."
+    )
+
+    bt_col1, bt_col2, bt_col3 = st.columns(3)
+    with bt_col1:
+        bt_mode = st.radio("Mode", ["1 Saham", "Seluruh Watchlist"], horizontal=True, key="bt_mode")
+    with bt_col2:
+        bt_horizon = st.slider("Horizon (hari trading ke depan)", min_value=3, max_value=30, value=10, key="bt_horizon")
+    with bt_col3:
+        bt_period = st.selectbox("Rentang data historis", ["1y", "2y", "5y"], index=0, key="bt_period")
+
+    if bt_mode == "1 Saham":
+        bt_kode = st.selectbox("Pilih saham", options=sorted(set(watchlist)), index=0, key="bt_kode_select")
+        bt_kode_manual = st.text_input("Atau ketik kode lain", value="", key="bt_kode_manual")
+        bt_kode_final = bt_kode_manual.strip().upper() if bt_kode_manual.strip() else bt_kode
+        bt_target_kodes = [bt_kode_final]
+    else:
+        if len(watchlist) > 300:
+            st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — backtest seluruh watchlist bisa makan waktu beberapa menit.")
+        bt_target_kodes = watchlist
+
+    bt_btn = st.button("🧪 Jalankan Backtest", type="primary", key="bt_run_btn")
+
+    if bt_btn:
+        all_trades = []
+        if len(bt_target_kodes) == 1:
+            with st.spinner(f"Mengambil data historis {bt_target_kodes[0]}..."):
+                df_bt_raw = fetch_history(bt_target_kodes[0], period=bt_period)
+            if df_bt_raw.empty:
+                st.error(f"Data untuk {bt_target_kodes[0]} tidak ditemukan.")
+            else:
+                df_bt_enriched = enrich_indicators(df_bt_raw)
+                all_trades = backtest_signals_single(df_bt_enriched, bt_target_kodes[0], horizon_days=bt_horizon)
+        else:
+            with st.spinner(f"Mengambil data {len(bt_target_kodes)} saham..."):
+                batch_bt = fetch_history_batch(tuple(bt_target_kodes), period=bt_period)
+            progress = st.progress(0, text="Menjalankan backtest...")
+            for idx, kode in enumerate(bt_target_kodes):
+                progress.progress((idx + 1) / len(bt_target_kodes), text=f"Backtest {kode}...")
+                raw = batch_bt.get(kode)
+                if raw is None or raw.empty:
+                    continue
+                enriched = enrich_indicators(raw)
+                trades = backtest_signals_single(enriched, kode, horizon_days=bt_horizon)
+                all_trades.extend(trades)
+            progress.empty()
+
+        if not all_trades:
+            st.info("Tidak ada sinyal historis yang terdeteksi pada rentang data ini.")
+        else:
+            df_all_trades = pd.DataFrame(all_trades)
+
+            st.markdown("#### 📊 Ringkasan Performa per Jenis Sinyal")
+            summary_rows = []
+            for sinyal_type in ["Breakout", "Bounce", "Volume Spike"]:
+                subset = df_all_trades[df_all_trades["sinyal"] == sinyal_type]
+                if subset.empty:
+                    continue
+                win_rate = (subset["return_pct"] > 0).mean() * 100
+                summary_rows.append({
+                    "Sinyal": sinyal_type,
+                    "Jumlah": len(subset),
+                    "Win Rate (%)": round(win_rate, 1),
+                    "Avg Return (%)": round(subset["return_pct"].mean(), 2),
+                    "Median Return (%)": round(subset["return_pct"].median(), 2),
+                    "Terbaik (%)": round(subset["return_pct"].max(), 2),
+                    "Terburuk (%)": round(subset["return_pct"].min(), 2),
+                })
+
+            df_summary = pd.DataFrame(summary_rows)
+
+            s_cols = st.columns(len(df_summary)) if len(df_summary) > 0 else []
+            for col, (_, row) in zip(s_cols, df_summary.iterrows()):
+                with col:
+                    win_color = "var(--up)" if row["Win Rate (%)"] >= 50 else "var(--down)"
+                    st.markdown(
+                        f"<div class='metric-box'><div class='metric-label'>{row['Sinyal']} ({row['Jumlah']}x)</div>"
+                        f"<div class='metric-value' style='color:{win_color}'>{row['Win Rate (%)']:.1f}% win</div>"
+                        f"<div class='metric-sub'>Avg return: {row['Avg Return (%)']:+.2f}%</div></div>",
+                        unsafe_allow_html=True,
+                    )
+
+            st.write("")
+            fig_bt = go.Figure()
+            fig_bt.add_trace(go.Bar(
+                x=df_summary["Sinyal"], y=df_summary["Avg Return (%)"],
+                marker_color=["#22C55E" if v >= 0 else "#EF4444" for v in df_summary["Avg Return (%)"]],
+                text=[f"{v:+.2f}%" for v in df_summary["Avg Return (%)"]], textposition="outside",
+            ))
+            fig_bt.update_layout(
+                height=280, template="plotly_dark", title=f"Rata-rata Return {bt_horizon} Hari Setelah Sinyal",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter, sans-serif", color="#E8EBF2"),
+                margin=dict(l=10, r=10, t=40, b=10), showlegend=False,
+            )
+            st.plotly_chart(fig_bt, use_container_width=True)
+
+            st.markdown("#### 📋 Detail Semua Trade")
+            df_trades_display = df_all_trades.copy()
+            df_trades_display["tanggal"] = pd.to_datetime(df_trades_display["tanggal"]).dt.strftime("%Y-%m-%d")
+            df_trades_display = df_trades_display.sort_values("tanggal", ascending=False)
+            df_trades_display.columns = ["Kode", "Tanggal", "Sinyal", "Harga Entry", "Harga Exit", "Return (%)"]
+            st.dataframe(df_trades_display, use_container_width=True, hide_index=True)
+
+            st.download_button(
+                "⬇️ Download Hasil Backtest (CSV)",
+                data=df_trades_display.to_csv(index=False).encode("utf-8"),
+                file_name=f"backtest_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                key="download_bt_csv",
+            )
+    else:
+        st.info("Atur parameter lalu klik 'Jalankan Backtest' untuk mulai.")
 
 st.markdown("---")
 st.caption("Dibuat untuk penggunaan pribadi. Data harga: Yahoo Finance. Berita: Google News RSS. Bukan nasihat keuangan.")
