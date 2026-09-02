@@ -427,6 +427,23 @@ def compute_pivot_points(df: pd.DataFrame):
     return {"pivot": p, "r1": r1, "r2": r2, "s1": s1, "s2": s2}
 
 
+def compute_macd(series: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
+    ema_fast = compute_ema(series, fast)
+    ema_slow = compute_ema(series, slow)
+    macd_line = ema_fast - ema_slow
+    signal_line = compute_ema(macd_line, signal)
+    histogram = macd_line - signal_line
+    return macd_line, signal_line, histogram
+
+
+def compute_bollinger(series: pd.Series, period: int = 20, num_std: float = 2.0):
+    mid = series.rolling(period).mean()
+    std = series.rolling(period).std()
+    upper = mid + num_std * std
+    lower = mid - num_std * std
+    return upper, mid, lower
+
+
 def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["EMA9"] = compute_ema(df["Close"], 9)
@@ -438,6 +455,8 @@ def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["Low20"] = df["Low"].rolling(20).min().shift(1)
     df["ValueTraded"] = df["Close"] * df["Volume"]
     df["AvgValue20"] = df["ValueTraded"].rolling(20).mean()
+    df["MACD"], df["MACD_Signal"], df["MACD_Hist"] = compute_macd(df["Close"])
+    df["BB_Upper"], df["BB_Mid"], df["BB_Lower"] = compute_bollinger(df["Close"])
     return df
 
 
@@ -852,11 +871,13 @@ with tab1:
 
         st.write("")
 
-        # Candlestick chart + EMA + S/R
+        show_bb = st.checkbox("Tampilkan Bollinger Bands di chart harga", value=True, key="show_bb")
+
+        # Candlestick chart + EMA + S/R + MACD
         fig = make_subplots(
-            rows=3, cols=1, shared_xaxes=True,
-            row_heights=[0.55, 0.2, 0.25], vertical_spacing=0.03,
-            subplot_titles=("Harga & EMA", "Volume", "RSI (14)"),
+            rows=4, cols=1, shared_xaxes=True,
+            row_heights=[0.42, 0.15, 0.2, 0.23], vertical_spacing=0.03,
+            subplot_titles=("Harga & EMA", "Volume", "RSI (14)", "MACD"),
         )
 
         fig.add_trace(go.Candlestick(
@@ -870,6 +891,15 @@ with tab1:
                                   line=dict(color="#F5A623", width=1.3)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA50"], name="EMA 50",
                                   line=dict(color="#A78BFA", width=1.3)), row=1, col=1)
+
+        if show_bb:
+            fig.add_trace(go.Scatter(x=df.index, y=df["BB_Upper"], name="BB Upper",
+                                      line=dict(color="#7C8698", width=1, dash="dot"),
+                                      showlegend=True), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df.index, y=df["BB_Lower"], name="BB Lower",
+                                      line=dict(color="#7C8698", width=1, dash="dot"),
+                                      fill="tonexty", fillcolor="rgba(124,134,152,0.07)",
+                                      showlegend=True), row=1, col=1)
 
         # Entry / Target / Stop Loss — digambar langsung di chart
         fig.add_hline(y=plan["entry_high"], line_dash="dash", line_color="#2DD4BF",
@@ -894,8 +924,17 @@ with tab1:
         fig.add_hline(y=70, line_dash="dot", line_color="#EF4444", row=3, col=1)
         fig.add_hline(y=30, line_dash="dot", line_color="#22C55E", row=3, col=1)
 
+        macd_hist_colors = np.where(df["MACD_Hist"] >= 0, "#22C55E", "#EF4444")
+        fig.add_trace(go.Bar(x=df.index, y=df["MACD_Hist"], name="MACD Histogram",
+                              marker_color=macd_hist_colors), row=4, col=1)
+        fig.add_trace(go.Scatter(x=df.index, y=df["MACD"], name="MACD",
+                                  line=dict(color="#2DD4BF", width=1.3)), row=4, col=1)
+        fig.add_trace(go.Scatter(x=df.index, y=df["MACD_Signal"], name="Signal",
+                                  line=dict(color="#F5A623", width=1.3)), row=4, col=1)
+        fig.add_hline(y=0, line_color="#7C8698", line_width=1, row=4, col=1)
+
         fig.update_layout(
-            height=780, template="plotly_dark",
+            height=980, template="plotly_dark",
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             xaxis_rangeslider_visible=False,
             font=dict(family="Inter, sans-serif", color="#E8EBF2"),
@@ -909,6 +948,10 @@ with tab1:
         interp = []
         interp.append(f"- **Trend EMA**: {trend} (EMA9 {last['EMA9']:,.0f} / EMA21 {last['EMA21']:,.0f} / EMA50 {last['EMA50']:,.0f}).")
         interp.append(f"- **RSI 14**: {last['RSI14']:.1f} → kondisi **{rsi_stat}**.")
+        macd_status = "Bullish (MACD di atas Signal)" if last["MACD"] > last["MACD_Signal"] else "Bearish (MACD di bawah Signal)"
+        interp.append(f"- **MACD**: {last['MACD']:.2f} vs Signal {last['MACD_Signal']:.2f} → **{macd_status}**.")
+        bb_position = "di atas Upper Band (overbought)" if last["Close"] > last["BB_Upper"] else "di bawah Lower Band (oversold)" if last["Close"] < last["BB_Lower"] else "di dalam band (normal)"
+        interp.append(f"- **Bollinger Bands**: harga saat ini {bb_position}.")
         interp.append(f"- **Volume**: {vol_ratio:.2f}x rata-rata 20 hari" + (" (di atas rata-rata, ada minat pasar lebih tinggi)." if vol_ratio > 1 else " (di bawah rata-rata, minat pasar relatif sepi)."))
         interp.append(f"- **Support terdekat**: Rp {pivots['s1']:,.0f} (pivot) / Rp {df['Low20'].iloc[-1]:,.0f} (low 20 hari).")
         interp.append(f"- **Resistance terdekat**: Rp {pivots['r1']:,.0f} (pivot) / Rp {df['High20'].iloc[-1]:,.0f} (high 20 hari).")
@@ -1001,6 +1044,16 @@ with tab2:
         else:
             df_res = pd.DataFrame(results)
             df_res = df_res[["kode", "harga", "perubahan_%", "rsi", "vol_ratio", "avg_value", "sinyal"]]
+
+            csv_export = df_res.copy()
+            csv_export["sinyal"] = csv_export["sinyal"].apply(lambda s: ", ".join(s))
+            csv_export.columns = ["Kode", "Harga", "Perubahan (%)", "RSI", "Vol Ratio", "Avg Value (Rp)", "Sinyal"]
+            st.download_button(
+                "⬇️ Download Hasil Scan (CSV)",
+                data=csv_export.to_csv(index=False).encode("utf-8"),
+                file_name=f"radar_scan_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+            )
 
             for sinyal_type, emoji, desc, css_class in [
                 ("Breakout", "▲", "Harga menembus resistance 20 hari dengan volume tinggi", "breakout"),
@@ -1318,6 +1371,13 @@ with tab4:
                     display_df["pbv"] = display_df["pbv"].apply(lambda v: f"{v:.2f}x" if pd.notna(v) else "-")
                     display_df.columns = ["Kode", "Nama", "Sektor", "PER", "PBV", "ROE", "DER", "NPM", "Growth Rev."]
                     st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    st.download_button(
+                        "⬇️ Download Hasil Screener (CSV)",
+                        data=display_df.to_csv(index=False).encode("utf-8"),
+                        file_name=f"fundamental_screener_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                        mime="text/csv",
+                        key="download_fund_csv",
+                    )
         else:
             st.info("Atur filter (opsional) lalu klik tombol scan untuk mulai.")
 
