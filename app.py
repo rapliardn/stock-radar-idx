@@ -621,6 +621,29 @@ def compute_bollinger(series: pd.Series, period: int = 20, num_std: float = 2.0)
     return upper, mid, lower
 
 
+def compute_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
+                       k_period: int = 14, d_period: int = 3):
+    """Stochastic Oscillator %K dan %D — lebih sensitif dari RSI untuk titik entry."""
+    lowest_low = low.rolling(k_period).min()
+    highest_high = high.rolling(k_period).max()
+    denom = highest_high - lowest_low
+    k = 100 * (close - lowest_low) / denom.replace(0, np.nan)
+    k = k.fillna(50)
+    d = k.rolling(d_period).mean()
+    return k, d
+
+
+def compute_atr(high: pd.Series, low: pd.Series, close: pd.Series,
+                period: int = 14) -> pd.Series:
+    """Average True Range — ukuran volatilitas, penting untuk position sizing & validasi breakout."""
+    tr1 = high - low
+    tr2 = (high - close.shift(1)).abs()
+    tr3 = (low - close.shift(1)).abs()
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    atr = tr.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    return atr
+
+
 def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["EMA9"] = compute_ema(df["Close"], 9)
@@ -634,6 +657,8 @@ def enrich_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["AvgValue20"] = df["ValueTraded"].rolling(20).mean()
     df["MACD"], df["MACD_Signal"], df["MACD_Hist"] = compute_macd(df["Close"])
     df["BB_Upper"], df["BB_Mid"], df["BB_Lower"] = compute_bollinger(df["Close"])
+    df["Stoch_K"], df["Stoch_D"] = compute_stochastic(df["High"], df["Low"], df["Close"])
+    df["ATR14"] = compute_atr(df["High"], df["Low"], df["Close"], 14)
     return df
 
 
@@ -1098,13 +1123,44 @@ with tab1:
 
         st.write("")
 
+        # Metric row 2: Stochastic & ATR
+        m6, m7, m8 = st.columns(3)
+        stoch_k_val = last["Stoch_K"] if pd.notna(last["Stoch_K"]) else 50
+        stoch_d_val = last["Stoch_D"] if pd.notna(last["Stoch_D"]) else 50
+        stoch_label = "Overbought" if stoch_k_val >= 80 else "Oversold" if stoch_k_val <= 20 else "Netral"
+        atr_val = last["ATR14"] if pd.notna(last["ATR14"]) else 0
+        atr_pct = (atr_val / last["Close"] * 100) if last["Close"] > 0 else 0
+        with m6:
+            st.markdown(
+                f"<div class='metric-box'><div class='metric-label'>Stochastic %K / %D</div>"
+                f"<div class='metric-value'>{stoch_k_val:.1f} / {stoch_d_val:.1f}</div>"
+                f"<div class='metric-sub' style='color:var(--text-muted)'>{stoch_label}</div></div>",
+                unsafe_allow_html=True,
+            )
+        with m7:
+            st.markdown(
+                f"<div class='metric-box'><div class='metric-label'>ATR (14)</div>"
+                f"<div class='metric-value'>Rp {atr_val:,.0f}</div>"
+                f"<div class='metric-sub' style='color:var(--text-muted)'>{atr_pct:.2f}% dari harga</div></div>",
+                unsafe_allow_html=True,
+            )
+        with m8:
+            stoch_cross = "Bullish (%K > %D)" if stoch_k_val > stoch_d_val else "Bearish (%K < %D)"
+            st.markdown(
+                f"<div class='metric-box'><div class='metric-label'>Stochastic Cross</div>"
+                f"<div style='font-family:\"Space Grotesk\",sans-serif;font-size:16px;font-weight:700;margin-top:6px'>{stoch_cross}</div></div>",
+                unsafe_allow_html=True,
+            )
+
+        st.write("")
+
         show_bb = st.checkbox("Tampilkan Bollinger Bands di chart harga", value=True, key="show_bb")
 
-        # Candlestick chart + EMA + S/R + MACD
+        # Candlestick chart + EMA + S/R + MACD + Stochastic
         fig = make_subplots(
-            rows=4, cols=1, shared_xaxes=True,
-            row_heights=[0.42, 0.15, 0.2, 0.23], vertical_spacing=0.03,
-            subplot_titles=("Harga & EMA", "Volume", "RSI (14)", "MACD"),
+            rows=5, cols=1, shared_xaxes=True,
+            row_heights=[0.35, 0.12, 0.15, 0.18, 0.20], vertical_spacing=0.025,
+            subplot_titles=("Harga & EMA", "Volume", "RSI (14)", "Stochastic (14,3)", "MACD"),
         )
 
         fig.add_trace(go.Candlestick(
@@ -1151,17 +1207,25 @@ with tab1:
         fig.add_hline(y=70, line_dash="dot", line_color="#EF4444", row=3, col=1)
         fig.add_hline(y=30, line_dash="dot", line_color="#22C55E", row=3, col=1)
 
+        # Stochastic Oscillator
+        fig.add_trace(go.Scatter(x=df.index, y=df["Stoch_K"], name="%K",
+                                  line=dict(color="#60A5FA", width=1.5)), row=4, col=1)
+        fig.add_trace(go.Scatter(x=df.index, y=df["Stoch_D"], name="%D",
+                                  line=dict(color="#F472B6", width=1.3, dash="dot")), row=4, col=1)
+        fig.add_hline(y=80, line_dash="dot", line_color="#EF4444", row=4, col=1)
+        fig.add_hline(y=20, line_dash="dot", line_color="#22C55E", row=4, col=1)
+
         macd_hist_colors = np.where(df["MACD_Hist"] >= 0, "#22C55E", "#EF4444")
         fig.add_trace(go.Bar(x=df.index, y=df["MACD_Hist"], name="MACD Histogram",
-                              marker_color=macd_hist_colors), row=4, col=1)
+                              marker_color=macd_hist_colors), row=5, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["MACD"], name="MACD",
-                                  line=dict(color="#2DD4BF", width=1.3)), row=4, col=1)
+                                  line=dict(color="#2DD4BF", width=1.3)), row=5, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["MACD_Signal"], name="Signal",
-                                  line=dict(color="#F5A623", width=1.3)), row=4, col=1)
-        fig.add_hline(y=0, line_color="#7C8698", line_width=1, row=4, col=1)
+                                  line=dict(color="#F5A623", width=1.3)), row=5, col=1)
+        fig.add_hline(y=0, line_color="#7C8698", line_width=1, row=5, col=1)
 
         fig.update_layout(
-            height=980, template="plotly_dark",
+            height=1120, template="plotly_dark",
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             xaxis_rangeslider_visible=False,
             font=dict(family="Inter, sans-serif", color="#E8EBF2"),
@@ -1182,6 +1246,9 @@ with tab1:
         interp.append(f"- **Volume**: {vol_ratio:.2f}x rata-rata 20 hari" + (" (di atas rata-rata, ada minat pasar lebih tinggi)." if vol_ratio > 1 else " (di bawah rata-rata, minat pasar relatif sepi)."))
         interp.append(f"- **Support terdekat**: Rp {pivots['s1']:,.0f} (pivot) / Rp {df['Low20'].iloc[-1]:,.0f} (low 20 hari).")
         interp.append(f"- **Resistance terdekat**: Rp {pivots['r1']:,.0f} (pivot) / Rp {df['High20'].iloc[-1]:,.0f} (high 20 hari).")
+        stoch_interp = f"**{stoch_label}**" + (f" — %K memotong %D dari bawah (sinyal beli potensial)." if stoch_k_val > stoch_d_val and last.get("Stoch_K", 50) < 50 else f" — %K memotong %D dari atas (sinyal jual potensial)." if stoch_k_val < stoch_d_val and last.get("Stoch_K", 50) > 50 else ".")
+        interp.append(f"- **Stochastic**: %K {stoch_k_val:.1f} / %D {stoch_d_val:.1f} → {stoch_interp}")
+        interp.append(f"- **ATR (14)**: Rp {atr_val:,.0f} ({atr_pct:.2f}% dari harga)" + (" — volatilitas tinggi, cocok untuk swing trade." if atr_pct >= 3 else " — volatilitas rendah, pertimbangkan posisi lebih besar atau cari saham lain." if atr_pct < 1.5 else " — volatilitas moderat."))
         st.markdown("\n".join(interp))
         st.caption("Catatan: ringkasan ini murni hasil perhitungan indikator teknikal, bukan saran investasi.")
 
@@ -1227,6 +1294,75 @@ with tab1:
             "bukan sinyal pasti dan bukan rekomendasi jual/beli. Selalu sesuaikan dengan analisa & manajemen risiko kamu sendiri."
         )
 
+        # Position Size Calculator
+        st.markdown("#### 💰 Position Size Calculator")
+        st.caption("Hitung jumlah lot ideal berdasarkan modal & toleransi risiko kamu. Fee broker IDX standar: beli 0.15%, jual 0.25%.")
+
+        ps_c1, ps_c2, ps_c3 = st.columns(3)
+        with ps_c1:
+            modal_rp = st.number_input("Modal yang dialokasikan (Rp)", value=10_000_000, step=1_000_000, min_value=100_000, key="ps_modal")
+        with ps_c2:
+            risk_pct = st.number_input("Risk per trade (% modal)", value=2.0, step=0.5, min_value=0.5, max_value=10.0, key="ps_risk")
+        with ps_c3:
+            fee_beli_pct = st.number_input("Fee beli (%)", value=0.15, step=0.01, min_value=0.0, key="ps_fee_beli")
+
+        # Hitung position size
+        entry_price = last["Close"]
+        sl_price = plan["stop_loss"]
+        risk_per_share = entry_price - sl_price
+        max_risk_rp = modal_rp * (risk_pct / 100)
+
+        if risk_per_share > 0 and entry_price > 0:
+            # IDX: 1 lot = 100 saham
+            max_shares_by_risk = int(max_risk_rp / risk_per_share)
+            total_cost_per_share = entry_price * (1 + fee_beli_pct / 100)
+            max_shares_by_capital = int(modal_rp / total_cost_per_share)
+            ideal_shares = min(max_shares_by_risk, max_shares_by_capital)
+            ideal_lots = ideal_shares // 100
+            actual_shares = ideal_lots * 100
+            total_investasi = actual_shares * entry_price
+            total_fee_beli = total_investasi * (fee_beli_pct / 100)
+            total_cost = total_investasi + total_fee_beli
+            risk_total = actual_shares * risk_per_share
+            reward_total = actual_shares * (plan["target1"] - entry_price) if plan["target1"] > entry_price else 0
+
+            ps_r1, ps_r2, ps_r3, ps_r4 = st.columns(4)
+            with ps_r1:
+                st.markdown(
+                    f"<div class='plan-box'><div class='plan-label'>Jumlah Lot Ideal</div>"
+                    f"<div class='plan-value' style='color:var(--teal)'>{ideal_lots} lot</div>"
+                    f"<div class='metric-sub' style='color:var(--text-muted)'>{actual_shares:,} lembar saham</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with ps_r2:
+                st.markdown(
+                    f"<div class='plan-box'><div class='plan-label'>Total Investasi + Fee</div>"
+                    f"<div class='plan-value'>Rp {total_cost:,.0f}</div>"
+                    f"<div class='metric-sub' style='color:var(--text-muted)'>Fee: Rp {total_fee_beli:,.0f}</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with ps_r3:
+                st.markdown(
+                    f"<div class='plan-box'><div class='plan-label'>Potensi Rugi (ke SL)</div>"
+                    f"<div class='plan-value' style='color:var(--down)'>Rp {risk_total:,.0f}</div>"
+                    f"<div class='metric-sub' style='color:var(--text-muted)'>{risk_total/modal_rp*100:.1f}% dari modal</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with ps_r4:
+                st.markdown(
+                    f"<div class='plan-box'><div class='plan-label'>Potensi Untung (ke TP1)</div>"
+                    f"<div class='plan-value' style='color:var(--up)'>Rp {reward_total:,.0f}</div>"
+                    f"<div class='metric-sub' style='color:var(--text-muted)'>{reward_total/modal_rp*100:.1f}% dari modal</div></div>",
+                    unsafe_allow_html=True,
+                )
+
+            st.caption(
+                f"📐 Berdasarkan harga entry Rp {entry_price:,.0f}, SL Rp {sl_price:,.0f} "
+                f"(risk Rp {risk_per_share:,.0f}/lembar), dan risk {risk_pct}% dari modal Rp {modal_rp:,.0f}."
+            )
+        else:
+            st.warning("Stop loss lebih tinggi atau sama dengan harga entry — tidak bisa menghitung position size.")
+
 # ----------------------------------------------------------------------------
 # TAB 2 — RADAR SAHAM HARIAN
 # ----------------------------------------------------------------------------
@@ -1265,8 +1401,19 @@ with tab2:
                 continue
         progress.empty()
 
+        # Simpan ke session_state supaya hasil tidak hilang saat pindah tab
+        st.session_state["radar_results"] = results
+        st.session_state["radar_skipped"] = skipped_illiquid
+        st.session_state["radar_liquidity"] = liquidity_min_miliar
+
+    # Render dari session_state (persistent across tab switches)
+    if "radar_results" in st.session_state:
+        results = st.session_state["radar_results"]
+        skipped_illiquid = st.session_state.get("radar_skipped", 0)
+        stored_liquidity = st.session_state.get("radar_liquidity", liquidity_min_miliar)
+
         if skipped_illiquid > 0:
-            st.caption(f"ℹ️ {skipped_illiquid} saham disaring karena rata-rata nilai transaksi di bawah Rp {liquidity_min_miliar} Miliar/hari.")
+            st.caption(f"ℹ️ {skipped_illiquid} saham disaring karena rata-rata nilai transaksi di bawah Rp {stored_liquidity} Miliar/hari.")
 
         if not results:
             st.info("Tidak ada sinyal Breakout / Bounce / Volume Spike terdeteksi di watchlist saat ini.")
@@ -1702,6 +1849,15 @@ with tab6:
                 all_trades.extend(trades)
             progress.empty()
 
+        # Simpan ke session_state supaya hasil tidak hilang saat pindah tab
+        st.session_state["bt_trades"] = all_trades
+        st.session_state["bt_horizon_saved"] = bt_horizon
+
+    # Render dari session_state (persistent across tab switches)
+    if "bt_trades" in st.session_state:
+        all_trades = st.session_state["bt_trades"]
+        saved_horizon = st.session_state.get("bt_horizon_saved", bt_horizon)
+
         if not all_trades:
             st.info("Tidak ada sinyal historis yang terdeteksi pada rentang data ini.")
         else:
@@ -1745,7 +1901,7 @@ with tab6:
                 text=[f"{v:+.2f}%" for v in df_summary["Avg Return (%)"]], textposition="outside",
             ))
             fig_bt.update_layout(
-                height=280, template="plotly_dark", title=f"Rata-rata Return {bt_horizon} Hari Setelah Sinyal",
+                height=280, template="plotly_dark", title=f"Rata-rata Return {saved_horizon} Hari Setelah Sinyal",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(family="Inter, sans-serif", color="#E8EBF2"),
                 margin=dict(l=10, r=10, t=40, b=10), showlegend=False,
