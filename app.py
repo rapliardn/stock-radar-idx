@@ -29,265 +29,248 @@ import time
 # ----------------------------------------------------------------------------
 st.set_page_config(
     page_title="IDX Stock Radar",
-    page_icon="📈",
+    page_icon="ðŸ“ˆ",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 CUSTOM_CSS = """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     :root {
-        --bg-base: #0A0E17;
-        --bg-surface: #10151F;
-        --border: #1C2333;
-        --teal: #2DD4BF;
-        --amber: #F5A623;
-        --violet: #A78BFA;
-        --up: #22C55E;
-        --down: #EF4444;
-        --text-primary: #E8EBF2;
-        --text-muted: #7C8698;
+        --bg-base: #111318;
+        --bg-surface: #1A1D24;
+        --bg-elevated: #22252D;
+        --border: #2A2D35;
+        --border-hover: #3A3D45;
+        --green: #00C853;
+        --green-dim: rgba(0, 200, 83, 0.12);
+        --green-border: rgba(0, 200, 83, 0.25);
+        --amber: #FFB300;
+        --violet: #B388FF;
+        --up: #00C853;
+        --down: #FF5252;
+        --text-primary: #E8EAED;
+        --text-secondary: #B0B3BA;
+        --text-muted: #6B6F78;
     }
 
     .stApp {
-        background:
-            radial-gradient(900px 480px at 8% -8%, rgba(45, 212, 191, 0.06) 0%, transparent 60%),
-            var(--bg-base);
+        background: var(--bg-base);
         color: var(--text-primary);
-        font-family: 'Inter', sans-serif;
+        font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
     }
     section[data-testid="stSidebar"] {
         background: var(--bg-surface);
         border-right: 1px solid var(--border);
     }
     h1, h2, h3, h4 {
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
         font-weight: 700;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.02em;
     }
+    h3 { font-size: 1.35rem; }
+    h4 { font-size: 1.1rem; color: var(--text-secondary); }
     [data-testid="stMetricValue"], .mono-num {
         font-family: 'JetBrains Mono', monospace;
     }
 
     /* ---- Header ---- */
-    .app-header {
+    .app-header-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-bottom: 16px;
-        margin-bottom: 6px;
+        padding: 12px 0 16px 0;
+        margin-bottom: 8px;
         border-bottom: 1px solid var(--border);
     }
-    .app-header-left { display: flex; align-items: center; gap: 14px; }
-    .logo-mark {
+    .app-header-left { display: flex; align-items: center; gap: 12px; }
+    .app-logo {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 18px;
-        color: var(--teal);
-        background: var(--bg-surface);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 8px 11px;
-        line-height: 1;
-    }
-    .app-title {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 26px;
+        font-size: 20px;
         font-weight: 700;
+        color: var(--green);
+    }
+    .app-title-text {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
         color: var(--text-primary);
-        line-height: 1.1;
+        letter-spacing: -0.03em;
     }
-    .app-subtitle {
-        font-family: 'Inter', sans-serif;
-        font-size: 13px;
-        color: var(--text-muted);
-        margin-top: 2px;
-    }
-    .live-chip {
-        font-family: 'JetBrains Mono', monospace;
+    .app-subtitle-text {
         font-size: 12px;
-        color: var(--teal);
-        border: 1px solid rgba(45, 212, 191, 0.35);
-        background: rgba(45, 212, 191, 0.06);
+        color: var(--text-muted);
+        margin-top: 1px;
+        font-weight: 500;
+    }
+    .live-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--green);
+        border: 1px solid var(--green-border);
+        background: var(--green-dim);
         border-radius: 20px;
-        padding: 6px 14px;
+        padding: 5px 14px;
+        letter-spacing: 0.04em;
     }
 
-    /* ---- Metric strip ---- */
+    /* ---- Metric cards ---- */
     .metric-box {
         background: var(--bg-surface);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 14px 16px;
+        border-radius: 12px;
+        padding: 16px 18px;
+        transition: border-color 0.2s;
     }
+    .metric-box:hover { border-color: var(--border-hover); }
     .metric-label {
-        font-family: 'Inter', sans-serif;
-        font-size: 12px;
+        font-size: 11px;
+        font-weight: 600;
         color: var(--text-muted);
-        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 6px;
     }
     .metric-value {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 21px;
-        font-weight: 600;
+        font-size: 22px;
+        font-weight: 700;
         color: var(--text-primary);
+        letter-spacing: -0.02em;
     }
     .metric-sub {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 13px;
-        margin-top: 2px;
+        font-size: 12px;
+        margin-top: 4px;
+        color: var(--text-secondary);
     }
 
-    /* ---- Radar signal cards: color-coded left border by signal type ---- */
+    /* ---- Radar cards ---- */
     .radar-card {
         background: var(--bg-surface);
         border: 1px solid var(--border);
-        border-left: 3px solid var(--teal);
-        border-radius: 6px;
-        padding: 8px 12px;
-        margin-bottom: 4px;
+        border-left: 3px solid var(--green);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 6px;
+        transition: background 0.15s;
     }
-    .radar-card.breakout { border-left-color: var(--teal); }
+    .radar-card:hover { background: var(--bg-elevated); }
+    .radar-card.breakout { border-left-color: var(--green); }
     .radar-card.bounce { border-left-color: var(--amber); }
     .radar-card.volspike { border-left-color: var(--violet); }
     .radar-ticker {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 16px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 15px;
         font-weight: 700;
-        color: var(--text-primary);
     }
     .radar-detail {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 12.5px;
+        font-size: 12px;
         color: var(--text-muted);
         margin-top: 4px;
     }
 
+    /* ---- Badges ---- */
     .badge-buy {
-        background: rgba(34, 197, 94, 0.12);
+        background: rgba(0, 200, 83, 0.10);
         color: var(--up);
-        border: 1px solid rgba(34, 197, 94, 0.35);
-        padding: 2px 10px;
+        border: 1px solid rgba(0, 200, 83, 0.30);
+        padding: 3px 10px;
         border-radius: 20px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
     }
     .badge-sell {
-        background: rgba(239, 68, 68, 0.12);
+        background: rgba(255, 82, 82, 0.10);
         color: var(--down);
-        border: 1px solid rgba(239, 68, 68, 0.35);
-        padding: 2px 10px;
+        border: 1px solid rgba(255, 82, 82, 0.30);
+        padding: 3px 10px;
         border-radius: 20px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
     }
     .badge-warn {
-        background: rgba(245, 166, 35, 0.12);
+        background: rgba(255, 179, 0, 0.10);
         color: var(--amber);
-        border: 1px solid rgba(245, 166, 35, 0.35);
-        padding: 2px 10px;
+        border: 1px solid rgba(255, 179, 0, 0.30);
+        padding: 3px 10px;
         border-radius: 20px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
     }
 
-    /* ---- News list ---- */
-    .news-item {
-        border-bottom: 1px solid var(--border);
-        padding: 11px 0;
-    }
-    .news-item a {
-        color: var(--text-primary);
-        text-decoration: none;
-        font-family: 'Inter', sans-serif;
-        font-weight: 600;
-        font-size: 14.5px;
-    }
-    .news-item a:hover { color: var(--teal); }
-    .news-source {
-        font-family: 'JetBrains Mono', monospace;
-        color: var(--text-muted);
-        font-size: 11.5px;
-        margin-top: 3px;
-    }
+    /* ---- News ---- */
+    .news-item { border-bottom: 1px solid var(--border); padding: 12px 0; }
+    .news-item a { color: var(--text-primary); text-decoration: none; font-weight: 600; font-size: 14px; }
+    .news-item a:hover { color: var(--green); }
+    .news-source { font-family: 'JetBrains Mono', monospace; color: var(--text-muted); font-size: 11px; margin-top: 4px; }
 
-    /* ---- Ticker badge (colored avatar) ---- */
+    /* ---- Ticker badge ---- */
     .ticker-badge {
-        width: 26px; height: 26px;
-        border-radius: 50%;
+        width: 28px; height: 28px;
+        border-radius: 6px;
         display: flex; align-items: center; justify-content: center;
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 700;
-        font-size: 12px;
-        flex-shrink: 0;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700; font-size: 12px; flex-shrink: 0;
     }
 
-    /* ---- Trading plan box ---- */
+    /* ---- Plan box ---- */
     .plan-box {
         background: var(--bg-surface);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 12px 14px;
+        border-radius: 12px;
+        padding: 14px 16px;
     }
     .plan-label {
-        font-family: 'Inter', sans-serif;
-        font-size: 11.5px;
-        color: var(--text-muted);
-        margin-bottom: 3px;
+        font-size: 11px; font-weight: 600; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
     }
     .plan-value {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--text-primary);
+        font-size: 17px; font-weight: 700; color: var(--text-primary);
     }
     .progress-track {
-        background: var(--border);
-        border-radius: 20px;
-        height: 8px;
-        width: 100%;
-        overflow: hidden;
-        margin-top: 6px;
+        background: var(--bg-elevated); border-radius: 20px;
+        height: 6px; width: 100%; overflow: hidden; margin-top: 8px;
     }
     .progress-fill {
-        background: linear-gradient(90deg, var(--teal), var(--amber));
-        height: 100%;
-        border-radius: 20px;
+        background: linear-gradient(90deg, var(--green), #69F0AE);
+        height: 100%; border-radius: 20px;
     }
 
-    /* ---- Tabs & buttons ---- */
+    /* ---- Tabs ---- */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
-        border-bottom: 1px solid var(--border);
+        gap: 0; border-bottom: 2px solid var(--border);
     }
     .stTabs [data-baseweb="tab"] {
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 500;
-        color: var(--text-muted);
-        background: transparent;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 600; font-size: 14px; color: var(--text-muted);
+        background: transparent; padding: 10px 20px;
     }
-    .stTabs [aria-selected="true"] {
-        color: var(--teal) !important;
-    }
-    .stTabs [data-baseweb="tab-highlight"] {
-        background-color: var(--teal) !important;
-    }
-    div.stButton > button[kind="primary"] {
-        background: var(--teal);
-        color: #0A0E17;
-        border: none;
-        font-weight: 600;
-    }
-    div.stButton > button[kind="primary"]:hover {
-        background: #26B8A5;
-        color: #0A0E17;
-    }
+    .stTabs [aria-selected="true"] { color: var(--green) !important; }
+    .stTabs [data-baseweb="tab-highlight"] { background-color: var(--green) !important; height: 2px; }
 
-    footer {visibility: hidden;}
+    /* ---- Buttons ---- */
+    div.stButton > button[kind="primary"] {
+        background: var(--green); color: #111318; border: none;
+        font-weight: 700; border-radius: 8px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    div.stButton > button[kind="primary"]:hover { background: #00E676; color: #111318; }
+
+    /* ---- Scrollbar ---- */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+
+    footer { visibility: hidden; }
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -623,7 +606,7 @@ def compute_bollinger(series: pd.Series, period: int = 20, num_std: float = 2.0)
 
 def compute_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
                        k_period: int = 14, d_period: int = 3):
-    """Stochastic Oscillator %K dan %D — lebih sensitif dari RSI untuk titik entry."""
+    """Stochastic Oscillator %K dan %D â€” lebih sensitif dari RSI untuk titik entry."""
     lowest_low = low.rolling(k_period).min()
     highest_high = high.rolling(k_period).max()
     denom = highest_high - lowest_low
@@ -635,7 +618,7 @@ def compute_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
 
 def compute_atr(high: pd.Series, low: pd.Series, close: pd.Series,
                 period: int = 14) -> pd.Series:
-    """Average True Range — ukuran volatilitas, penting untuk position sizing & validasi breakout."""
+    """Average True Range â€” ukuran volatilitas, penting untuk position sizing & validasi breakout."""
     tr1 = high - low
     tr2 = (high - close.shift(1)).abs()
     tr3 = (low - close.shift(1)).abs()
@@ -783,7 +766,7 @@ def rsi_label(rsi_val: float) -> str:
     return "Netral"
 
 
-BADGE_PALETTE = ["#2DD4BF", "#F5A623", "#A78BFA", "#60A5FA", "#F472B6", "#34D399", "#FB923C", "#38BDF8"]
+BADGE_PALETTE = ["#00C853", "#FFB300", "#B388FF", "#448AFF", "#FF4081", "#00E676", "#FF9100", "#40C4FF"]
 
 
 def ticker_badge_color(kode: str) -> str:
@@ -825,7 +808,7 @@ def compute_trading_plan(df: pd.DataFrame, pivots: dict) -> dict:
 # HELPER: ANALISA FUNDAMENTAL
 # ----------------------------------------------------------------------------
 
-@st.cache_data(ttl=43200, show_spinner=False)  # 12 jam — data fundamental jarang berubah
+@st.cache_data(ttl=43200, show_spinner=False)  # 12 jam â€” data fundamental jarang berubah
 def fetch_fundamentals(kode: str) -> dict:
     ticker = to_yf_ticker(kode)
     try:
@@ -873,7 +856,7 @@ def fetch_fundamentals_batch(kodes: list, max_workers: int = 8, progress_callbac
 
 
 def fundamental_label(metric: str, value) -> tuple:
-    """Return (label, css_class_badge) — aturan umum, bukan patokan mutlak, beda tiap sektor."""
+    """Return (label, css_class_badge) â€” aturan umum, bukan patokan mutlak, beda tiap sektor."""
     if value is None or pd.isna(value):
         return "N/A", "badge-sell"
     if metric == "per":
@@ -944,8 +927,8 @@ def fetch_news(query: str, lang: str = "id-ID", country: str = "ID", limit: int 
 # ----------------------------------------------------------------------------
 # SIDEBAR
 # ----------------------------------------------------------------------------
-st.sidebar.markdown("## ▲▼ Stock Radar")
-st.sidebar.caption("Tools analisa saham pribadi — data via Yahoo Finance (delay ~15-20 menit)")
+st.sidebar.markdown("## â–²â–¼ Stock Radar")
+st.sidebar.caption("Tools analisa saham pribadi â€” data via Yahoo Finance (delay ~15-20 menit)")
 
 # Watchlist tersimpan lewat URL (bookmark link ini biar watchlist otomatis ke-load lagi)
 url_watchlist = st.query_params.get("wl", "")
@@ -966,10 +949,10 @@ elif "wl" in st.query_params:
     del st.query_params["wl"]
 
 st.sidebar.caption(
-    "💾 Kalau kamu custom-edit watchlist (bukan default 951 saham), otomatis kesimpen di URL browser — "
+    "ðŸ’¾ Kalau kamu custom-edit watchlist (bukan default 951 saham), otomatis kesimpen di URL browser â€” "
     "**bookmark halaman ini** biar watchlist custom kamu otomatis ke-load lagi."
 )
-st.sidebar.caption(f"📋 Total saham di watchlist saat ini: **{len(watchlist)}**")
+st.sidebar.caption(f"ðŸ“‹ Total saham di watchlist saat ini: **{len(watchlist)}**")
 
 liquidity_min_miliar = st.sidebar.slider(
     "Minimum rata-rata nilai transaksi harian (Miliar Rp)",
@@ -988,7 +971,7 @@ period_option = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 st.sidebar.caption(
-    "⚠️ Disclaimer: tools ini untuk edukasi & bantu riset pribadi, "
+    "âš ï¸ Disclaimer: tools ini untuk edukasi & bantu riset pribadi, "
     "bukan rekomendasi jual/beli. Selalu DYOR (Do Your Own Research)."
 )
 
@@ -999,11 +982,13 @@ h_left, h_right = st.columns([3, 1])
 with h_left:
     st.markdown(
         """
-        <div class="app-header-left" style="padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:6px">
-            <div class="logo-mark">▲▼</div>
-            <div>
-                <div class="app-title">Stock Radar</div>
-                <div class="app-subtitle">Analisa Teknikal & Radar Saham Harian — Bursa Efek Indonesia</div>
+        <div class="app-header-bar">
+            <div class="app-header-left">
+                <div class="app-logo">â—† SR</div>
+                <div>
+                    <div class="app-title-text">Stock Radar</div>
+                    <div class="app-subtitle-text">Analisa Teknikal & Radar Saham Â· IDX</div>
+                </div>
             </div>
         </div>
         """,
@@ -1015,14 +1000,16 @@ with h_right:
         <div style="display:flex;align-items:center;justify-content:flex-end;height:100%;padding-top:6px">
             <div id="live-clock" style="
                 font-family:'JetBrains Mono',monospace;
-                font-size:12px;
-                color:#2DD4BF;
-                border:1px solid rgba(45,212,191,0.35);
-                background:rgba(45,212,191,0.06);
+                font-size:11px;
+                font-weight:600;
+                color:#00C853;
+                border:1px solid rgba(0,200,83,0.25);
+                background:rgba(0,200,83,0.08);
                 border-radius:20px;
-                padding:6px 14px;
+                padding:5px 14px;
                 white-space:nowrap;
-            ">● memuat waktu...</div>
+                letter-spacing:0.03em;
+            ">â— LIVE</div>
         </div>
         <style>
             html, body { background: transparent !important; margin:0; padding:0; }
@@ -1034,7 +1021,7 @@ with h_right:
                 const dateStr = now.toLocaleDateString('id-ID', { ...opts, day:'2-digit', month:'short', year:'numeric' });
                 const timeStr = now.toLocaleTimeString('id-ID', { ...opts, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
                 const el = document.getElementById('live-clock');
-                if (el) { el.innerText = '● ' + dateStr + ' · ' + timeStr + ' WIB'; }
+                if (el) { el.innerText = 'â— ' + dateStr + ' Â· ' + timeStr + ' WIB'; }
             }
             updateClock();
             setInterval(updateClock, 1000);
@@ -1045,11 +1032,11 @@ with h_right:
 
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 Analisa Saham", "🎯 Radar Harian", "🗺️ Overview IHSG", "🧮 Fundamental", "📰 Berita IHSG & Global", "🧪 Backtest",
+    "ðŸ“Š Analisa Saham", "ðŸŽ¯ Radar Harian", "ðŸ—ºï¸ Overview IHSG", "ðŸ§® Fundamental", "ðŸ“° Berita IHSG & Global", "ðŸ§ª Backtest",
 ])
 
 # ----------------------------------------------------------------------------
-# TAB 1 — ANALISA SAHAM PER TICKER
+# TAB 1 â€” ANALISA SAHAM PER TICKER
 # ----------------------------------------------------------------------------
 with tab1:
     col_input, col_btn = st.columns([4, 1])
@@ -1117,7 +1104,7 @@ with tab1:
             st.markdown(
                 f"<div class='metric-box'><div class='metric-label'>Support / Resistance (Pivot)</div>"
                 f"<div class='metric-sub' style='margin-top:6px;color:var(--text-primary)'>"
-                f"S1: {pivots['s1']:,.0f} &nbsp;·&nbsp; R1: {pivots['r1']:,.0f}</div></div>",
+                f"S1: {pivots['s1']:,.0f} &nbsp;Â·&nbsp; R1: {pivots['r1']:,.0f}</div></div>",
                 unsafe_allow_html=True,
             )
 
@@ -1165,15 +1152,15 @@ with tab1:
 
         fig.add_trace(go.Candlestick(
             x=df.index, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],
-            name="Harga", increasing_line_color="#22C55E", decreasing_line_color="#EF4444",
+            name="Harga", increasing_line_color="#00C853", decreasing_line_color="#FF5252",
         ), row=1, col=1)
 
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA9"], name="EMA 9",
-                                  line=dict(color="#2DD4BF", width=1.3)), row=1, col=1)
+                                  line=dict(color="#00C853", width=1.3)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA21"], name="EMA 21",
-                                  line=dict(color="#F5A623", width=1.3)), row=1, col=1)
+                                  line=dict(color="#FFB300", width=1.3)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["EMA50"], name="EMA 50",
-                                  line=dict(color="#A78BFA", width=1.3)), row=1, col=1)
+                                  line=dict(color="#B388FF", width=1.3)), row=1, col=1)
 
         if show_bb:
             fig.add_trace(go.Scatter(x=df.index, y=df["BB_Upper"], name="BB Upper",
@@ -1184,44 +1171,44 @@ with tab1:
                                       fill="tonexty", fillcolor="rgba(124,134,152,0.07)",
                                       showlegend=True), row=1, col=1)
 
-        # Entry / Target / Stop Loss — digambar langsung di chart
-        fig.add_hline(y=plan["entry_high"], line_dash="dash", line_color="#2DD4BF",
-                      annotation_text="Entry 1", annotation_font_color="#2DD4BF", row=1, col=1)
-        fig.add_hline(y=plan["entry_low"], line_dash="dash", line_color="#2DD4BF",
-                      annotation_text="Entry 2", annotation_font_color="#2DD4BF", row=1, col=1)
-        fig.add_hline(y=plan["stop_loss"], line_dash="dash", line_color="#EF4444",
-                      annotation_text="SL", annotation_font_color="#EF4444", row=1, col=1)
-        fig.add_hline(y=plan["target1"], line_dash="dash", line_color="#22C55E",
-                      annotation_text="TP1", annotation_font_color="#22C55E", row=1, col=1)
-        fig.add_hline(y=plan["target2"], line_dash="dot", line_color="#22C55E",
-                      annotation_text="TP2", annotation_font_color="#22C55E", row=1, col=1)
+        # Entry / Target / Stop Loss â€” digambar langsung di chart
+        fig.add_hline(y=plan["entry_high"], line_dash="dash", line_color="#00C853",
+                      annotation_text="Entry 1", annotation_font_color="#00C853", row=1, col=1)
+        fig.add_hline(y=plan["entry_low"], line_dash="dash", line_color="#00C853",
+                      annotation_text="Entry 2", annotation_font_color="#00C853", row=1, col=1)
+        fig.add_hline(y=plan["stop_loss"], line_dash="dash", line_color="#FF5252",
+                      annotation_text="SL", annotation_font_color="#FF5252", row=1, col=1)
+        fig.add_hline(y=plan["target1"], line_dash="dash", line_color="#00C853",
+                      annotation_text="TP1", annotation_font_color="#00C853", row=1, col=1)
+        fig.add_hline(y=plan["target2"], line_dash="dot", line_color="#00C853",
+                      annotation_text="TP2", annotation_font_color="#00C853", row=1, col=1)
 
-        vol_colors = np.where(df["Close"] >= df["Open"], "#22C55E", "#EF4444")
+        vol_colors = np.where(df["Close"] >= df["Open"], "#00C853", "#FF5252")
         fig.add_trace(go.Bar(x=df.index, y=df["Volume"], name="Volume",
                               marker_color=vol_colors), row=2, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["VolAvg20"], name="Vol Avg 20",
                                   line=dict(color="#7C8698", width=1)), row=2, col=1)
 
         fig.add_trace(go.Scatter(x=df.index, y=df["RSI14"], name="RSI 14",
-                                  line=dict(color="#A78BFA", width=1.5)), row=3, col=1)
-        fig.add_hline(y=70, line_dash="dot", line_color="#EF4444", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dot", line_color="#22C55E", row=3, col=1)
+                                  line=dict(color="#B388FF", width=1.5)), row=3, col=1)
+        fig.add_hline(y=70, line_dash="dot", line_color="#FF5252", row=3, col=1)
+        fig.add_hline(y=30, line_dash="dot", line_color="#00C853", row=3, col=1)
 
         # Stochastic Oscillator
         fig.add_trace(go.Scatter(x=df.index, y=df["Stoch_K"], name="%K",
                                   line=dict(color="#60A5FA", width=1.5)), row=4, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["Stoch_D"], name="%D",
                                   line=dict(color="#F472B6", width=1.3, dash="dot")), row=4, col=1)
-        fig.add_hline(y=80, line_dash="dot", line_color="#EF4444", row=4, col=1)
-        fig.add_hline(y=20, line_dash="dot", line_color="#22C55E", row=4, col=1)
+        fig.add_hline(y=80, line_dash="dot", line_color="#FF5252", row=4, col=1)
+        fig.add_hline(y=20, line_dash="dot", line_color="#00C853", row=4, col=1)
 
-        macd_hist_colors = np.where(df["MACD_Hist"] >= 0, "#22C55E", "#EF4444")
+        macd_hist_colors = np.where(df["MACD_Hist"] >= 0, "#00C853", "#FF5252")
         fig.add_trace(go.Bar(x=df.index, y=df["MACD_Hist"], name="MACD Histogram",
                               marker_color=macd_hist_colors), row=5, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["MACD"], name="MACD",
-                                  line=dict(color="#2DD4BF", width=1.3)), row=5, col=1)
+                                  line=dict(color="#00C853", width=1.3)), row=5, col=1)
         fig.add_trace(go.Scatter(x=df.index, y=df["MACD_Signal"], name="Signal",
-                                  line=dict(color="#F5A623", width=1.3)), row=5, col=1)
+                                  line=dict(color="#FFB300", width=1.3)), row=5, col=1)
         fig.add_hline(y=0, line_color="#7C8698", line_width=1, row=5, col=1)
 
         fig.update_layout(
@@ -1235,31 +1222,31 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
 
         # Interpretasi otomatis
-        st.markdown("#### 🧠 Ringkasan Analisa Otomatis")
+        st.markdown("#### ðŸ§  Ringkasan Analisa Otomatis")
         interp = []
         interp.append(f"- **Trend EMA**: {trend} (EMA9 {last['EMA9']:,.0f} / EMA21 {last['EMA21']:,.0f} / EMA50 {last['EMA50']:,.0f}).")
-        interp.append(f"- **RSI 14**: {last['RSI14']:.1f} → kondisi **{rsi_stat}**.")
+        interp.append(f"- **RSI 14**: {last['RSI14']:.1f} â†’ kondisi **{rsi_stat}**.")
         macd_status = "Bullish (MACD di atas Signal)" if last["MACD"] > last["MACD_Signal"] else "Bearish (MACD di bawah Signal)"
-        interp.append(f"- **MACD**: {last['MACD']:.2f} vs Signal {last['MACD_Signal']:.2f} → **{macd_status}**.")
+        interp.append(f"- **MACD**: {last['MACD']:.2f} vs Signal {last['MACD_Signal']:.2f} â†’ **{macd_status}**.")
         bb_position = "di atas Upper Band (overbought)" if last["Close"] > last["BB_Upper"] else "di bawah Lower Band (oversold)" if last["Close"] < last["BB_Lower"] else "di dalam band (normal)"
         interp.append(f"- **Bollinger Bands**: harga saat ini {bb_position}.")
         interp.append(f"- **Volume**: {vol_ratio:.2f}x rata-rata 20 hari" + (" (di atas rata-rata, ada minat pasar lebih tinggi)." if vol_ratio > 1 else " (di bawah rata-rata, minat pasar relatif sepi)."))
         interp.append(f"- **Support terdekat**: Rp {pivots['s1']:,.0f} (pivot) / Rp {df['Low20'].iloc[-1]:,.0f} (low 20 hari).")
         interp.append(f"- **Resistance terdekat**: Rp {pivots['r1']:,.0f} (pivot) / Rp {df['High20'].iloc[-1]:,.0f} (high 20 hari).")
-        stoch_interp = f"**{stoch_label}**" + (f" — %K memotong %D dari bawah (sinyal beli potensial)." if stoch_k_val > stoch_d_val and last.get("Stoch_K", 50) < 50 else f" — %K memotong %D dari atas (sinyal jual potensial)." if stoch_k_val < stoch_d_val and last.get("Stoch_K", 50) > 50 else ".")
-        interp.append(f"- **Stochastic**: %K {stoch_k_val:.1f} / %D {stoch_d_val:.1f} → {stoch_interp}")
-        interp.append(f"- **ATR (14)**: Rp {atr_val:,.0f} ({atr_pct:.2f}% dari harga)" + (" — volatilitas tinggi, cocok untuk swing trade." if atr_pct >= 3 else " — volatilitas rendah, pertimbangkan posisi lebih besar atau cari saham lain." if atr_pct < 1.5 else " — volatilitas moderat."))
+        stoch_interp = f"**{stoch_label}**" + (f" â€” %K memotong %D dari bawah (sinyal beli potensial)." if stoch_k_val > stoch_d_val and last.get("Stoch_K", 50) < 50 else f" â€” %K memotong %D dari atas (sinyal jual potensial)." if stoch_k_val < stoch_d_val and last.get("Stoch_K", 50) > 50 else ".")
+        interp.append(f"- **Stochastic**: %K {stoch_k_val:.1f} / %D {stoch_d_val:.1f} â†’ {stoch_interp}")
+        interp.append(f"- **ATR (14)**: Rp {atr_val:,.0f} ({atr_pct:.2f}% dari harga)" + (" â€” volatilitas tinggi, cocok untuk swing trade." if atr_pct >= 3 else " â€” volatilitas rendah, pertimbangkan posisi lebih besar atau cari saham lain." if atr_pct < 1.5 else " â€” volatilitas moderat."))
         st.markdown("\n".join(interp))
         st.caption("Catatan: ringkasan ini murni hasil perhitungan indikator teknikal, bukan saran investasi.")
 
         # Rencana Trading (referensi teknikal)
-        st.markdown("#### 📋 Rencana Trading (Referensi Teknikal)")
+        st.markdown("#### ðŸ“‹ Rencana Trading (Referensi Teknikal)")
 
         p1, p2, p3, p4 = st.columns(4)
         with p1:
             st.markdown(
                 f"<div class='plan-box'><div class='plan-label'>Entry Area</div>"
-                f"<div class='plan-value'>{plan['entry_low']:,.0f} – {plan['entry_high']:,.0f}</div></div>",
+                f"<div class='plan-value'>{plan['entry_low']:,.0f} â€“ {plan['entry_high']:,.0f}</div></div>",
                 unsafe_allow_html=True,
             )
         with p2:
@@ -1290,12 +1277,12 @@ with tab1:
             unsafe_allow_html=True,
         )
         st.caption(
-            "⚠️ Rencana trading ini dihitung otomatis dari support/resistance & pivot point — "
+            "âš ï¸ Rencana trading ini dihitung otomatis dari support/resistance & pivot point â€” "
             "bukan sinyal pasti dan bukan rekomendasi jual/beli. Selalu sesuaikan dengan analisa & manajemen risiko kamu sendiri."
         )
 
         # Position Size Calculator
-        st.markdown("#### 💰 Position Size Calculator")
+        st.markdown("#### ðŸ’° Position Size Calculator")
         st.caption("Hitung jumlah lot ideal berdasarkan modal & toleransi risiko kamu. Fee broker IDX standar: beli 0.15%, jual 0.25%.")
 
         ps_c1, ps_c2, ps_c3 = st.columns(3)
@@ -1357,22 +1344,22 @@ with tab1:
                 )
 
             st.caption(
-                f"📐 Berdasarkan harga entry Rp {entry_price:,.0f}, SL Rp {sl_price:,.0f} "
+                f"ðŸ“ Berdasarkan harga entry Rp {entry_price:,.0f}, SL Rp {sl_price:,.0f} "
                 f"(risk Rp {risk_per_share:,.0f}/lembar), dan risk {risk_pct}% dari modal Rp {modal_rp:,.0f}."
             )
         else:
-            st.warning("Stop loss lebih tinggi atau sama dengan harga entry — tidak bisa menghitung position size.")
+            st.warning("Stop loss lebih tinggi atau sama dengan harga entry â€” tidak bisa menghitung position size.")
 
 # ----------------------------------------------------------------------------
-# TAB 2 — RADAR SAHAM HARIAN
+# TAB 2 â€” RADAR SAHAM HARIAN
 # ----------------------------------------------------------------------------
 with tab2:
-    st.markdown("### 🎯 Radar Saham Harian")
+    st.markdown("### ðŸŽ¯ Radar Saham Harian")
     st.caption("Scan watchlist untuk sinyal **Breakout**, **Bounce/Rebound**, dan **Volume Spike**.")
 
     if len(watchlist) > 300:
-        st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — scan pertama bisa makan waktu beberapa menit. Hasil akan di-cache 5 menit.")
-    scan_btn = st.button("🔍 Scan Watchlist Sekarang", type="primary")
+        st.caption(f"â±ï¸ Watchlist kamu ada {len(watchlist)} saham â€” scan pertama bisa makan waktu beberapa menit. Hasil akan di-cache 5 menit.")
+    scan_btn = st.button("ðŸ” Scan Watchlist Sekarang", type="primary")
 
     if scan_btn:
         results = []
@@ -1413,7 +1400,7 @@ with tab2:
         stored_liquidity = st.session_state.get("radar_liquidity", liquidity_min_miliar)
 
         if skipped_illiquid > 0:
-            st.caption(f"ℹ️ {skipped_illiquid} saham disaring karena rata-rata nilai transaksi di bawah Rp {stored_liquidity} Miliar/hari.")
+            st.caption(f"â„¹ï¸ {skipped_illiquid} saham disaring karena rata-rata nilai transaksi di bawah Rp {stored_liquidity} Miliar/hari.")
 
         if not results:
             st.info("Tidak ada sinyal Breakout / Bounce / Volume Spike terdeteksi di watchlist saat ini.")
@@ -1425,16 +1412,16 @@ with tab2:
             csv_export["sinyal"] = csv_export["sinyal"].apply(lambda s: ", ".join(s))
             csv_export.columns = ["Kode", "Harga", "Perubahan (%)", "RSI", "Vol Ratio", "Avg Value (Rp)", "Sinyal"]
             st.download_button(
-                "⬇️ Download Hasil Scan (CSV)",
+                "â¬‡ï¸ Download Hasil Scan (CSV)",
                 data=csv_export.to_csv(index=False).encode("utf-8"),
                 file_name=f"radar_scan_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
             )
 
             for sinyal_type, emoji, desc, css_class in [
-                ("Breakout", "▲", "Harga menembus resistance 20 hari dengan volume tinggi", "breakout"),
-                ("Bounce", "↻", "Rebound dari area support / EMA21 dengan RSI membaik", "bounce"),
-                ("Volume Spike", "◆", "Lonjakan volume signifikan (≥2x rata-rata 20 hari)", "volspike"),
+                ("Breakout", "â–²", "Harga menembus resistance 20 hari dengan volume tinggi", "breakout"),
+                ("Bounce", "â†»", "Rebound dari area support / EMA21 dengan RSI membaik", "bounce"),
+                ("Volume Spike", "â—†", "Lonjakan volume signifikan (â‰¥2x rata-rata 20 hari)", "volspike"),
             ]:
                 subset = df_res[df_res["sinyal"].apply(lambda s: sinyal_type in s)]
                 if subset.empty:
@@ -1452,9 +1439,9 @@ with tab2:
                         f"<span class='radar-ticker'>{row['kode']}</span> "
                         f"<span class='{badge_class}'>{row['perubahan_%']:+.2f}%</span>"
                         f"<div class='radar-detail'>"
-                        f"Rp {row['harga']:,.0f} &nbsp;·&nbsp; RSI {row['rsi']} "
-                        f"&nbsp;·&nbsp; Vol {row['vol_ratio']:.2f}x avg20 "
-                        f"&nbsp;·&nbsp; Nilai {format_rupiah_ringkas(row['avg_value'])}</div>"
+                        f"Rp {row['harga']:,.0f} &nbsp;Â·&nbsp; RSI {row['rsi']} "
+                        f"&nbsp;Â·&nbsp; Vol {row['vol_ratio']:.2f}x avg20 "
+                        f"&nbsp;Â·&nbsp; Nilai {format_rupiah_ringkas(row['avg_value'])}</div>"
                         f"</div></div></div>",
                         unsafe_allow_html=True,
                     )
@@ -1462,10 +1449,10 @@ with tab2:
         st.info("Klik tombol di atas untuk mulai scan watchlist kamu.")
 
 # ----------------------------------------------------------------------------
-# TAB 3 — OVERVIEW IHSG & HEATMAP SEKTOR
+# TAB 3 â€” OVERVIEW IHSG & HEATMAP SEKTOR
 # ----------------------------------------------------------------------------
 with tab3:
-    st.markdown("### 🗺️ Overview IHSG & Heatmap Sektor")
+    st.markdown("### ðŸ—ºï¸ Overview IHSG & Heatmap Sektor")
 
     # --- Index IHSG ---
     with st.spinner("Mengambil data index IHSG..."):
@@ -1505,7 +1492,7 @@ with tab3:
         fig_ihsg = go.Figure()
         fig_ihsg.add_trace(go.Scatter(
             x=df_ihsg.index, y=df_ihsg["Close"], mode="lines", name="IHSG",
-            line=dict(color="#2DD4BF", width=2),
+            line=dict(color="#00C853", width=2),
             fill="tozeroy", fillcolor="rgba(45,212,191,0.08)",
         ))
         fig_ihsg.update_layout(
@@ -1520,12 +1507,12 @@ with tab3:
     st.markdown("---")
 
     # --- Market Breadth & Heatmap Sektor ---
-    st.markdown("#### 📡 Market Breadth & Heatmap Sektor")
+    st.markdown("#### ðŸ“¡ Market Breadth & Heatmap Sektor")
     st.caption("Berdasarkan pergerakan harga hari terakhir dari seluruh saham di watchlist kamu.")
 
     if len(watchlist) > 300:
-        st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — proses ini bisa makan waktu beberapa menit.")
-    breadth_btn = st.button("🔄 Muat Data Market", type="primary", key="breadth_btn")
+        st.caption(f"â±ï¸ Watchlist kamu ada {len(watchlist)} saham â€” proses ini bisa makan waktu beberapa menit.")
+    breadth_btn = st.button("ðŸ”„ Muat Data Market", type="primary", key="breadth_btn")
 
     if breadth_btn:
         with st.spinner(f"Mengambil data {len(watchlist)} saham..."):
@@ -1583,7 +1570,7 @@ with tab3:
             fig_breadth = go.Figure()
             fig_breadth.add_trace(go.Bar(
                 x=["Naik", "Turun", "Tidak Berubah"], y=[n_up, n_down, n_flat],
-                marker_color=["#22C55E", "#EF4444", "#7C8698"],
+                marker_color=["#00C853", "#FF5252", "#7C8698"],
             ))
             fig_breadth.update_layout(
                 height=220, template="plotly_dark",
@@ -1593,7 +1580,7 @@ with tab3:
             )
             st.plotly_chart(fig_breadth, use_container_width=True)
 
-            st.markdown("#### 🔥 Heatmap Performa Sektor")
+            st.markdown("#### ðŸ”¥ Heatmap Performa Sektor")
             sector_avg = df_breadth.groupby("sektor")["chg_pct"].mean().reset_index()
             sector_count = df_breadth.groupby("sektor").size().reset_index(name="count")
             sector_stats = sector_avg.merge(sector_count, on="sektor")
@@ -1604,7 +1591,7 @@ with tab3:
                 values=sector_stats["count"],
                 marker=dict(
                     colors=sector_stats["chg_pct"],
-                    colorscale=[[0, "#EF4444"], [0.5, "#7C8698"], [1, "#22C55E"]],
+                    colorscale=[[0, "#FF5252"], [0.5, "#7C8698"], [1, "#00C853"]],
                     cmid=0,
                     showscale=True,
                     colorbar=dict(title="% Chg"),
@@ -1623,16 +1610,16 @@ with tab3:
         st.info("Klik tombol di atas untuk memuat market breadth & heatmap sektor.")
 
 # ----------------------------------------------------------------------------
-# TAB 4 — ANALISA FUNDAMENTAL
+# TAB 4 â€” ANALISA FUNDAMENTAL
 # ----------------------------------------------------------------------------
 with tab4:
-    st.markdown("### 🧮 Analisa Fundamental")
+    st.markdown("### ðŸ§® Analisa Fundamental")
     st.caption(
         "Metrik: PER, PBV, ROE, DER, pertumbuhan pendapatan, net profit margin. "
-        "Data dari Yahoo Finance — beberapa saham IDX punya data terbatas."
+        "Data dari Yahoo Finance â€” beberapa saham IDX punya data terbatas."
     )
 
-    sub_tab_single, sub_tab_screener = st.tabs(["🔍 Cek 1 Saham", "📋 Screener Watchlist"])
+    sub_tab_single, sub_tab_screener = st.tabs(["ðŸ” Cek 1 Saham", "ðŸ“‹ Screener Watchlist"])
 
     with sub_tab_single:
         kode_fund = st.selectbox(
@@ -1651,7 +1638,7 @@ with tab4:
             st.error(f"Data fundamental untuk **{kode_fund_final}** tidak tersedia.")
         else:
             st.markdown(f"#### {fdata['nama']} ({fdata['kode']})")
-            st.caption(f"Sektor: {fdata['sektor']} · Industri: {fdata['industri']}")
+            st.caption(f"Sektor: {fdata['sektor']} Â· Industri: {fdata['industri']}")
 
             f1, f2, f3, f4, f5, f6 = st.columns(6)
             metric_defs = [
@@ -1691,7 +1678,7 @@ with tab4:
                 )
 
             st.caption(
-                "⚠️ Ambang label (mis. ROE 'Bagus' ≥15%) adalah aturan umum lintas sektor, bukan patokan mutlak — "
+                "âš ï¸ Ambang label (mis. ROE 'Bagus' â‰¥15%) adalah aturan umum lintas sektor, bukan patokan mutlak â€” "
                 "perusahaan perbankan/properti/komoditas punya karakteristik rasio yang berbeda-beda. "
                 "Bandingkan dengan kompetitor sesektor sebelum mengambil keputusan."
             )
@@ -1710,8 +1697,8 @@ with tab4:
             max_per = st.number_input("Max PER (0 = tanpa batas)", value=0, step=1)
 
         if len(watchlist) > 300:
-            st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — fetch data fundamental (1 request per saham) bisa makan waktu cukup lama di scan pertama. Hasil di-cache 12 jam.")
-        screener_btn = st.button("🔍 Scan Fundamental Watchlist", type="primary", key="fund_screener_btn")
+            st.caption(f"â±ï¸ Watchlist kamu ada {len(watchlist)} saham â€” fetch data fundamental (1 request per saham) bisa makan waktu cukup lama di scan pertama. Hasil di-cache 12 jam.")
+        screener_btn = st.button("ðŸ” Scan Fundamental Watchlist", type="primary", key="fund_screener_btn")
 
         if screener_btn:
             progress = st.progress(0, text="Mengambil data fundamental...")
@@ -1752,7 +1739,7 @@ with tab4:
                     display_df.columns = ["Kode", "Nama", "Sektor", "PER", "PBV", "ROE", "DER", "NPM", "Growth Rev."]
                     st.dataframe(display_df, use_container_width=True, hide_index=True)
                     st.download_button(
-                        "⬇️ Download Hasil Screener (CSV)",
+                        "â¬‡ï¸ Download Hasil Screener (CSV)",
                         data=display_df.to_csv(index=False).encode("utf-8"),
                         file_name=f"fundamental_screener_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                         mime="text/csv",
@@ -1766,7 +1753,7 @@ with tab5:
     col_ihsg, col_global = st.columns(2)
 
     with col_ihsg:
-        st.markdown("### 🇮🇩 Berita IHSG & Saham Indonesia")
+        st.markdown("### ðŸ‡®ðŸ‡© Berita IHSG & Saham Indonesia")
         with st.spinner("Memuat berita..."):
             news_ihsg = fetch_news("IHSG OR bursa saham Indonesia", lang="id-ID", country="ID")
         if not news_ihsg:
@@ -1774,12 +1761,12 @@ with tab5:
         for n in news_ihsg:
             st.markdown(
                 f"<div class='news-item'><a href='{n['link']}' target='_blank'>{n['title']}</a>"
-                f"<div class='news-source'>{n['source']} • {n['published']}</div></div>",
+                f"<div class='news-source'>{n['source']} â€¢ {n['published']}</div></div>",
                 unsafe_allow_html=True,
             )
 
     with col_global:
-        st.markdown("### 🌍 Berita Market Global")
+        st.markdown("### ðŸŒ Berita Market Global")
         with st.spinner("Memuat berita..."):
             news_global = fetch_news("wall street OR global stock market", lang="en-US", country="US")
         if not news_global:
@@ -1787,22 +1774,22 @@ with tab5:
         for n in news_global:
             st.markdown(
                 f"<div class='news-item'><a href='{n['link']}' target='_blank'>{n['title']}</a>"
-                f"<div class='news-source'>{n['source']} • {n['published']}</div></div>",
+                f"<div class='news-source'>{n['source']} â€¢ {n['published']}</div></div>",
                 unsafe_allow_html=True,
             )
 
 # ----------------------------------------------------------------------------
-# TAB 6 — BACKTEST SINYAL HISTORIS
+# TAB 6 â€” BACKTEST SINYAL HISTORIS
 # ----------------------------------------------------------------------------
 with tab6:
-    st.markdown("### 🧪 Backtest Sinyal Historis")
+    st.markdown("### ðŸ§ª Backtest Sinyal Historis")
     st.caption(
         "Cek seberapa akurat sinyal Breakout / Bounce / Volume Spike kita secara historis. "
         "Untuk setiap sinyal yang terdeteksi di masa lalu, kita lihat berapa return harga N hari setelahnya."
     )
     st.caption(
-        "⚠️ Ini backtest murni harga (tanpa fee transaksi, tanpa slippage, tanpa mempertimbangkan Stop Loss/Target "
-        "secara ketat — cuma return harga polos di N hari ke depan). Performa masa lalu juga tidak menjamin hasil ke depan."
+        "âš ï¸ Ini backtest murni harga (tanpa fee transaksi, tanpa slippage, tanpa mempertimbangkan Stop Loss/Target "
+        "secara ketat â€” cuma return harga polos di N hari ke depan). Performa masa lalu juga tidak menjamin hasil ke depan."
     )
 
     bt_col1, bt_col2, bt_col3 = st.columns(3)
@@ -1820,10 +1807,10 @@ with tab6:
         bt_target_kodes = [bt_kode_final]
     else:
         if len(watchlist) > 300:
-            st.caption(f"⏱️ Watchlist kamu ada {len(watchlist)} saham — backtest seluruh watchlist bisa makan waktu beberapa menit.")
+            st.caption(f"â±ï¸ Watchlist kamu ada {len(watchlist)} saham â€” backtest seluruh watchlist bisa makan waktu beberapa menit.")
         bt_target_kodes = watchlist
 
-    bt_btn = st.button("🧪 Jalankan Backtest", type="primary", key="bt_run_btn")
+    bt_btn = st.button("ðŸ§ª Jalankan Backtest", type="primary", key="bt_run_btn")
 
     if bt_btn:
         all_trades = []
@@ -1863,7 +1850,7 @@ with tab6:
         else:
             df_all_trades = pd.DataFrame(all_trades)
 
-            st.markdown("#### 📊 Ringkasan Performa per Jenis Sinyal")
+            st.markdown("#### ðŸ“Š Ringkasan Performa per Jenis Sinyal")
             summary_rows = []
             for sinyal_type in ["Breakout", "Bounce", "Volume Spike"]:
                 subset = df_all_trades[df_all_trades["sinyal"] == sinyal_type]
@@ -1897,7 +1884,7 @@ with tab6:
             fig_bt = go.Figure()
             fig_bt.add_trace(go.Bar(
                 x=df_summary["Sinyal"], y=df_summary["Avg Return (%)"],
-                marker_color=["#22C55E" if v >= 0 else "#EF4444" for v in df_summary["Avg Return (%)"]],
+                marker_color=["#00C853" if v >= 0 else "#FF5252" for v in df_summary["Avg Return (%)"]],
                 text=[f"{v:+.2f}%" for v in df_summary["Avg Return (%)"]], textposition="outside",
             ))
             fig_bt.update_layout(
@@ -1908,7 +1895,7 @@ with tab6:
             )
             st.plotly_chart(fig_bt, use_container_width=True)
 
-            st.markdown("#### 📋 Detail Semua Trade")
+            st.markdown("#### ðŸ“‹ Detail Semua Trade")
             df_trades_display = df_all_trades.copy()
             df_trades_display["tanggal"] = pd.to_datetime(df_trades_display["tanggal"]).dt.strftime("%Y-%m-%d")
             df_trades_display = df_trades_display.sort_values("tanggal", ascending=False)
@@ -1916,7 +1903,7 @@ with tab6:
             st.dataframe(df_trades_display, use_container_width=True, hide_index=True)
 
             st.download_button(
-                "⬇️ Download Hasil Backtest (CSV)",
+                "â¬‡ï¸ Download Hasil Backtest (CSV)",
                 data=df_trades_display.to_csv(index=False).encode("utf-8"),
                 file_name=f"backtest_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
